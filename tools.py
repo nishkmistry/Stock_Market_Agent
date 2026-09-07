@@ -65,7 +65,7 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
             "current_price": round(float(latest_data["Close"]), 2),
             "market_cap": info.get("marketCap", 0),
             "pe_ratio": info.get("trailingPE", None),
-            "dividend_yield": info.get("dividendYield", 0) * 100 if info.get("dividendYield") else 0,
+            "dividend_yield": round(info.get("dividendYield", 0) * 100, 4) if info.get("dividendYield") else 0,
             "52_week_high": info.get("fiftyTwoWeekHigh", None),
             "52_week_low": info.get("fiftyTwoWeekLow", None),
             "volume": int(latest_data["Volume"]),
@@ -88,14 +88,6 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
             "symbol": ticker.upper(),
             "last_updated": datetime.now().isoformat()
         }
-
-
-import requests
-import os
-from dotenv import load_dotenv
-
-# Load environment variables for API keys
-load_dotenv()
 
 def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
     """

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Agent - Autonomous Investment Research</title>
+    <meta name="description" content="AI-powered autonomous investment research assistant using Gemini and the ReAct reasoning loop for Indian and global stock markets.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,47 +15,67 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
-            color: #333;
-            background-color: #f8f9fa;
-            padding: 20px;
-            background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1a1a2e;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
             min-height: 100vh;
+            padding: 20px;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 960px;
             margin: 0 auto;
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
             overflow: hidden;
         }
 
+        /* ── Header ── */
         header {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            background: linear-gradient(135deg, #1e3c72, #2a5298, #1a237e);
             color: white;
             text-align: center;
-            padding: 40px 20px;
+            padding: 48px 24px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: -60px; left: -60px;
+            width: 200px; height: 200px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; right: -40px;
+            width: 250px; height: 250px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 50%;
         }
 
         header h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
+            font-size: 2.6rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
         }
 
         header p {
-            opacity: 0.9;
-            font-size: 1.2rem;
-            max-width: 700px;
+            opacity: 0.88;
+            font-size: 1.1rem;
+            max-width: 680px;
             margin: 0 auto;
+            font-weight: 400;
         }
 
+        /* ── Main layout ── */
         main {
             padding: 40px;
         }
@@ -62,213 +85,365 @@
         }
 
         .demo-section h2 {
-            color: #2c3e50;
-            margin-bottom: 25px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding-bottom: 10px;
-            border-bottom: 3px solid #eee;
-        }
-
-        .demo-section h2::before {
-            font-size: 1.8rem;
-        }
-
-        .query-input {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 25px;
-            flex-wrap: wrap;
-        }
-
-        .query-input input {
-            flex: 1;
-            min-width: 300px;
-            padding: 15px 20px;
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-        }
-
-        .query-input input:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
-        }
-
-        .query-input select {
-            padding: 15px 20px;
-            border: 2px solid #ddd;
-            border-radius: 12px;
-            font-size: 1.1rem;
-            min-width: 200px;
-            background: white;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .query-input select:focus {
-            outline: none;
-            border-color: #3498db;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
-        }
-
-        .btn {
-            background: linear-gradient(135deg, #3498db, #2c3e50);
-            color: white;
-            border: none;
-            padding: 15px 35px;
-            font-size: 1.1rem;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
             font-weight: 600;
             display: flex;
             align-items: center;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e8eef7;
+        }
+
+        /* ── How it works steps ── */
+        ol {
+            padding-left: 20px;
+            color: #444;
+        }
+
+        ol li {
+            margin-bottom: 8px;
+        }
+
+        /* ── Input area ── */
+        .query-input {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            min-width: 280px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #dde3ef;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            background: #fafbff;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.15);
+            background: white;
+        }
+
+        .input-group select {
+            padding: 14px 16px;
+            border: 2px solid #dde3ef;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: #fafbff;
+            cursor: pointer;
+            transition: border-color 0.25s, box-shadow 0.25s;
+            min-width: 120px;
+        }
+
+        .input-group select:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.15);
+        }
+
+        select#analysis-type {
+            padding: 14px 16px;
+            border: 2px solid #dde3ef;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: #fafbff;
+            cursor: pointer;
+            min-width: 200px;
+            transition: border-color 0.25s;
+        }
+
+        select#analysis-type:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.15);
+        }
+
+        /* ── Buttons ── */
+        .btn {
+            background: linear-gradient(135deg, #2a5298, #1e3c72);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            font-size: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            font-weight: 600;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
             gap: 8px;
+            white-space: nowrap;
         }
 
         .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 60, 114, 0.35);
         }
 
         .btn:active {
-            transform: translateY(-1px);
+            transform: translateY(0);
         }
 
         .btn:disabled {
-            opacity: 0.6;
+            opacity: 0.55;
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
 
+        .example-queries {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .example-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 10px 18px;
+            font-size: 0.9rem;
+        }
+
+        .example-btn:hover {
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        /* ── Loading ── */
         .loading {
             text-align: center;
             padding: 40px;
-            color: #7f8c8d;
+            color: #5a6a8a;
             font-style: italic;
             display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
 
-        .loading::after {
-            content: '';
+        .spinner {
             display: inline-block;
-            width: 20px;
-            height: 20px;
-            margin-left: 10px;
-            border: 3px solid #f3f3f3;
-            border-top-color: #3498db;
+            width: 22px;
+            height: 22px;
+            border: 3px solid #dde3ef;
+            border-top-color: #2a5298;
             border-radius: 50%;
-            animation: spin 1s ease-in-out infinite;
-            vertical-align: middle;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
         }
 
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
 
+        /* ── Results container ── */
         .results {
-            background: #f8f9fa;
-            border-radius: 15px;
-            padding: 30px;
-            margin-top: 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            background: #f4f7fb;
+            border-radius: 16px;
+            padding: 28px;
+            margin-top: 20px;
+            min-height: 40px;
         }
 
-        .results h3 {
-            color: #2c3e50;
-            margin-bottom: 25px;
+        /* ── Reasoning process ── */
+        .reasoning-process {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid #e8eef7;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .reasoning-process h3 {
+            color: #1e3c72;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 8px;
         }
 
+        .iteration {
+            background: #f0f4ff;
+            border-radius: 10px;
+            padding: 14px 18px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .iteration h4 {
+            color: #2a5298;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .iteration p {
+            color: #444;
+            font-size: 0.95rem;
+            font-style: italic;
+        }
+
+        .observation-action {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 12px 18px;
+            margin-bottom: 10px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .observation-action h4 {
+            color: #1b5e20;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .observation-action p {
+            color: #2d6a2d;
+            font-size: 0.95rem;
+        }
+
+        /* ── Agent answer (markdown-like) ── */
+        .agent-answer {
+            background: white;
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 20px;
+            border: 1px solid #e8eef7;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #222;
+            line-height: 1.8;
+            font-size: 1rem;
+        }
+
+        .agent-answer h3 {
+            color: #1e3c72;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Stock info ── */
         .stock-info {
             background: white;
             border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #e8eef7;
         }
 
         .stock-info h4 {
-            color: #2c3e50;
+            color: #1e3c72;
             margin-bottom: 20px;
+            font-size: 1.05rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .metrics {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
         }
 
         .metric {
             text-align: center;
-            padding: 15px;
-            background: #f8f9fa;
+            padding: 14px;
+            background: #f4f7fb;
             border-radius: 10px;
         }
 
         .metric-label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: #7f8c8d;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .metric-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #2c3e50;
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #1e3c72;
             display: block;
         }
 
         .metric-unit {
-            font-size: 0.9rem;
-            color: #95a5a6;
+            font-size: 0.8rem;
+            color: #a0aab4;
         }
 
+        .data-source {
+            font-size: 0.8rem;
+            color: #a0aab4;
+            margin-top: 16px;
+            text-align: right;
+        }
+
+        /* ── News ── */
         .news-section, .filings-section {
             background: white;
             border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #e8eef7;
         }
 
         .news-section h4, .filings-section h4 {
-            color: #2c3e50;
-            margin-bottom: 20px;
+            color: #1e3c72;
+            margin-bottom: 16px;
+            font-size: 1.05rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .article, .filing {
-            background: #f8f9fa;
+            background: #f4f7fb;
             border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-left: 4px solid #3498db;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-left: 4px solid #2a5298;
         }
 
         .article h5, .filing h5 {
-            color: #2c3e50;
-            margin-bottom: 12px;
+            color: #1e3c72;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
         }
 
         .article-meta, .filing-meta {
             display: flex;
-            gap: 20px;
-            margin-bottom: 12px;
-            font-size: 0.9rem;
+            gap: 16px;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
             color: #95a5a6;
             flex-wrap: wrap;
         }
@@ -276,72 +451,103 @@
         .article-summary, .filing-summary {
             color: #555;
             line-height: 1.6;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
         }
 
         .article-link, .filing-link {
-            color: #3498db;
+            color: #2a5298;
             text-decoration: none;
             font-weight: 600;
-            border-bottom: 1px solid #3498db;
+            font-size: 0.9rem;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
         }
 
         .article-link:hover, .filing-link:hover {
-            border-bottom-color: #2980b9;
+            border-bottom-color: #2a5298;
         }
 
+        /* ── Synthesis ── */
         .synthesis {
-            background: linear-gradient(135deg, #e8f8f5, #d5f5e3);
+            background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
             border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
+            padding: 24px;
+            margin-bottom: 20px;
             border-left: 4px solid #27ae60;
         }
 
         .synthesis h4 {
-            color: #27ae60;
-            margin-bottom: 20px;
+            color: #1b5e20;
+            margin-bottom: 16px;
+            font-size: 1.05rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
+        .synthesis p {
+            color: #2d6a4f;
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+
+        /* ── Sources ── */
         .sources {
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 20px;
-            margin-top: 25px;
+            background: #f4f7fb;
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-top: 16px;
         }
 
         .sources h4 {
-            color: #2c3e50;
-            margin-bottom: 15px;
+            color: #1e3c72;
+            margin-bottom: 12px;
+            font-size: 1rem;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .source-list {
             display: flex;
-            gap: 20px;
+            gap: 10px;
             flex-wrap: wrap;
         }
 
         .source-item {
             background: white;
-            padding: 12px 20px;
+            padding: 8px 16px;
             border-radius: 20px;
-            font-size: 0.9rem;
-            color: #2c3e50;
-            border: 1px solid #eee;
+            font-size: 0.85rem;
+            color: #2a5298;
+            border: 1px solid #dde3ef;
         }
 
+        /* ── Error ── */
+        .error {
+            background: #fff5f5;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #ef4444;
+            border-radius: 12px;
+            padding: 24px;
+            color: #991b1b;
+        }
+
+        .error h3 {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Footer ── */
         .footer {
             text-align: center;
-            padding: 30px;
+            padding: 28px 40px;
             color: #7f8c8d;
-            font-size: 0.9rem;
-            border-top: 1px solid #eee;
+            font-size: 0.88rem;
+            border-top: 1px solid #e8eef7;
         }
 
         .footer p {
@@ -349,57 +555,41 @@
         }
 
         .footer .disclaimer {
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 20px auto;
-            max-width: 800px;
-            font-size: 0.9rem;
-            color: #856404;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin: 16px auto 0;
+            max-width: 760px;
+            font-size: 0.85rem;
+            color: #92400e;
+            text-align: left;
         }
 
+        /* ── Responsive ── */
         @media (max-width: 768px) {
-            .query-input {
-                flex-direction: column;
-            }
-
-            .query-input input,
-            .query-input select {
-                min-width: 100%;
-            }
-
-            header h1 {
-                font-size: 2rem;
-            }
-
-            main {
-                padding: 25px;
-            }
+            main { padding: 24px; }
+            .query-input { flex-direction: column; }
+            .input-group { flex-direction: column; min-width: 100%; }
+            header h1 { font-size: 2rem; }
         }
 
         @media (max-width: 480px) {
-            .metrics {
-                grid-template-columns: 1fr;
-            }
-
-            .article-meta, .filing-meta {
-                flex-direction: column;
-                gap: 8px;
-            }
+            .metrics { grid-template-columns: repeat(2, 1fr); }
+            .article-meta, .filing-meta { flex-direction: column; gap: 4px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🤖 Finance Agent</h1>
-            <p>Autonomous Investment Research Assistant using ReAct (Reasoning and Acting) Loop</p>
+            <h1> Finance Agent</h1>
+            <p>Autonomous Investment Research Assistant powered by Gemini AI using the ReAct (Reasoning and Acting) Loop</p>
         </header>
 
         <main>
             <section class="demo-section">
-                <h2>🔍 How the Agent Works</h2>
+                <h2> How the Agent Works</h2>
                 <p>The Finance Agent uses a <strong>ReAct loop</strong> (Reasoning and Acting) to autonomously research investment questions:</p>
                 <ol>
                     <li><strong>Reason</strong>: Analyze the query to determine what information is needed</li>
@@ -411,465 +601,199 @@
             </section>
 
             <section class="demo-section">
-                <h2>💬 Ask Your Investment Question</h2>
+                <h2> Ask Your Investment Question</h2>
                 <div class="query-input">
                     <div class="input-group">
-                        <input type="text" id="ticker-input" placeholder="Ticker name (e.g., RELIANCE)" />
+                        <input type="text" id="ticker-input" placeholder="Ticker (e.g., RELIANCE)" autocomplete="off" />
                         <select id="exchange-select">
-                            <option value="NS">NSE (NS)</option>
-                            <option value="BO">BSE (BO)</option>
-                            <option value="NSE">NSE (NSE)</option>
-                            <option value="BSE">BSE (BSE)</option>
+                            <option value="NS">NSE</option>
+                            <option value="BO">BSE</option>
                             <option value="US">US (no suffix)</option>
                         </select>
                     </div>
                     <select id="analysis-type">
                         <option value="auto">Auto-detect (Recommended)</option>
-                        <option value="stock">Stock Data Only</option>
-                        <option value="news">News Only</option>
-                        <option value="filings">Regulatory Filings Only</option>
+                        <option value="stock-only">Stock Data Only</option>
+                        <option value="news-only">News Only</option>
+                        <option value="filings-only">Regulatory Filings Only</option>
                         <option value="comprehensive">Comprehensive Analysis</option>
                     </select>
                     <button class="btn" id="analyze-btn">
-                        <span>🔍 Analyze</span>
+                        <span> Analyze</span>
                     </button>
                 </div>
 
                 <div class="loading" id="loading">
-                    <span>Agent is reasoning and acting...</span>
+                    <div class="spinner"></div>
+                    <span>Agent is reasoning and acting... this may take a few seconds</span>
                 </div>
 
-                <div class="results" id="results">
-                    <!-- Results will be populated here -->
-                </div>
+                <div class="results" id="results" style="display:none;"></div>
             </section>
 
             <section class="demo-section">
-                <h2>🧪 Example Queries</h2>
+                <h2> Example Queries</h2>
                 <div class="example-queries">
-                    <button class="btn example-btn" data-query="What's RELIANCE.NS trading at right now?">
-                        Stock Price Query
+                    <button class="btn example-btn" data-ticker="RELIANCE" data-exchange="NS" data-type="stock-only">
+                         RELIANCE Stock Price
                     </button>
-                    <button class="btn example-btn" data-query="Show me recent news for TCS.NS">
-                        News Inquiry
+                    <button class="btn example-btn" data-ticker="TCS" data-exchange="NS" data-type="news-only">
+                         TCS Latest News
                     </button>
-                    <button class="btn example-btn" data-query="What are the latest regulatory filings for INFY.NS?">
-                        Filings Search
+                    <button class="btn example-btn" data-ticker="INFY" data-exchange="NS" data-type="filings-only">
+                         INFY Regulatory Filings
                     </button>
-                    <button class="btn example-btn" data-query="Give me a comprehensive analysis of HDFCBANK.NS">
-                        Comprehensive Analysis
+                    <button class="btn example-btn" data-ticker="HDFCBANK" data-exchange="NS" data-type="comprehensive">
+                         HDFCBANK Full Analysis
+                    </button>
+                    <button class="btn example-btn" data-ticker="AAPL" data-exchange="US" data-type="comprehensive">
+                         AAPL Full Analysis
                     </button>
                 </div>
             </section>
         </main>
 
         <footer class="footer">
-            <p>Finance Agent Demo &copy; 2026 | For educational purposes only</p>
+            <p>Finance Agent &copy; 2026 | Powered by Google Gemini AI</p>
             <div class="disclaimer">
-                <strong>Disclaimer:</strong> This is a demonstration of agent architecture. Stock data, news, and filings are simulated for educational purposes. Not financial advice.
+                <strong>Disclaimer:</strong> This tool is for educational and research purposes only. Stock data is fetched in real-time via Yahoo Finance. News is sourced from GNews and Marketaux APIs. This is not financial advice. Always consult a qualified financial advisor before making investment decisions.
             </div>
         </footer>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const tickerInput = document.getElementById('ticker-input');
             const exchangeSelect = document.getElementById('exchange-select');
-            const analysisType = document.getElementById('analysis-type');
-            
+            const analysisTypeSelect = document.getElementById('analysis-type');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
 
-const analyzeBtn = document.getElementById("analyze-btn");
-const loading = document.getElementById("loading");
-const results = document.getElementById("results");
-
-analyzeBtn.addEventListener("click", async function() {
-    const ticker = tickerInput.value.trim().toUpperCase();
-    const exchange = exchangeSelect.value;
-    let tickerSymbol = ticker;
-    if (exchange && exchange !== "US") {
-        tickerSymbol = ticker + "." + exchange;
-    }
-    const query = `What's ${tickerSymbol} trading at right now?`;
-    const type = analysisType.value;
-
-    if (!ticker) {
-        alert("Please enter a ticker symbol");
-        return;
-    }
-
-    await runAnalysis(query, type);
-});
+            // ── Analyze button ──
+            analyzeBtn.addEventListener('click', function () {
+                const ticker = tickerInput.value.trim().toUpperCase();
+                if (!ticker) {
+                    alert('Please enter a ticker symbol (e.g. RELIANCE)');
+                    return;
                 }
-            // Handle example button clicks
-            exampleBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const query = this.getAttribute('data-query');
-                    // Extract ticker symbol from the query (assuming format: ... tickerSymbol ...)
-                    const tickerMatch = query.match(/([A-Z]+\.[A-Z]{2})/i);
-                    if (tickerMatch) {
-                        const [tickerPart, exchangePart] = tickerMatch[0].split('.');
-                        tickerInput.value = tickerPart;
-                        exchangeSelect.value = exchangePart;
-                    } else {
-                        // Fallback: set tickerInput to the whole query? Not ideal.
-                        tickerInput.value = '';
-                        exchangeSelect.value = 'NS';
-                    }
-                    analyzeBtn.click();
+
+                const exchange = exchangeSelect.value;
+                const tickerSymbol = exchange === 'US' ? ticker : `${ticker}.${exchange}`;
+                const type = analysisTypeSelect.value;
+                const query = buildQuery(tickerSymbol, type);
+                runAnalysis(query, tickerSymbol, type);
+            });
+
+            // ── Example buttons ──
+            document.querySelectorAll('.example-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const ticker = this.dataset.ticker;
+                    const exchange = this.dataset.exchange;
+                    const type = this.dataset.type;
+
+                    tickerInput.value = ticker;
+                    exchangeSelect.value = exchange;
+                    analysisTypeSelect.value = type;
+
+                    const tickerSymbol = exchange === 'US' ? ticker : `${ticker}.${exchange}`;
+                    const query = buildQuery(tickerSymbol, type);
+                    runAnalysis(query, tickerSymbol, type);
                 });
             });
 
-            // Handle Enter key in input
-            tickerInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    analyzeBtn.click();
-                }
-            });
+            // ── Enter key support ──
+            tickerInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') analyzeBtn.click();
             });
 
-            async function runAnalysis(query, analysisType) {
-                // Show loading
-                loading.style.display = 'block';
-                results.innerHTML = '';
+            function buildQuery(tickerSymbol, type) {
+                switch (type) {
+                    case 'stock-only':
+                        return `What is the current stock price, P/E ratio, market cap, and key metrics for ${tickerSymbol}?`;
+                    case 'news-only':
+                        return `What are the latest news articles and recent developments for ${tickerSymbol}?`;
+                    case 'filings-only':
+                        return `What are the latest regulatory filings and compliance documents for ${tickerSymbol}?`;
+                    case 'comprehensive':
+                        return `Give me a comprehensive investment analysis of ${tickerSymbol} including current price, key metrics, recent news, and regulatory filings.`;
+                    default: // auto
+                        return `Analyze ${tickerSymbol} and provide relevant investment information.`;
+                }
+            }
+
+            async function runAnalysis(query, tickerSymbol, type) {
+                // Show loading, hide results
+                loadingDiv.style.display = 'flex';
+                resultsDiv.style.display = 'none';
+                resultsDiv.innerHTML = '';
                 analyzeBtn.disabled = true;
 
                 try {
-                    // Simulate agent processing (in real app, this would be an API call)
-                    const result = await simulateFinanceAgent(query, analysisType);
-                    displayResults(result);
-                } catch (error) {
-                    results.innerHTML = `
+                    const response = await fetch('/api/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query, ticker: tickerSymbol })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || data.error) {
+                        throw new Error(data.error || `Server error: ${response.status}`);
+                    }
+
+                    displayAnswer(data.answer, tickerSymbol, query);
+
+                } catch (err) {
+                    resultsDiv.innerHTML = `
                         <div class="error">
-                            <h3>❌ Error</h3>
-                            <p>${error.message}</p>
-                        </div>
-                    ';
+                            <h3> Error</h3>
+                            <p>${err.message}</p>
+                            <p style="margin-top:8px;font-size:0.9rem;opacity:0.8;">
+                                Make sure the Flask server (app.py) is running and your GEMINI_API_KEY is set in .env
+                            </p>
+                        </div>`;
+                    resultsDiv.style.display = 'block';
                 } finally {
-                    // Hide loading
-                    loading.style.display = 'none';
+                    loadingDiv.style.display = 'none';
                     analyzeBtn.disabled = false;
                 }
             }
 
-            async function simulateFinanceAgent(query, analysisType) {
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // Extract ticker from query (simple regex)
-                const tickerMatch = query.match(/([A-Z]+\.[A-Z]{2})/i);
-                const ticker = tickerMatch ? tickerMatch[1] : 'RELIANCE.NS';
-
-                // Simulate different responses based on analysis type
-                if (analysisType === 'stock-only') {
-                    return generateStockData(ticker);
-                } else if (analysisType === 'news-only') {
-                    return generateNewsData(ticker);
-                } else if (analysisType === 'filings-only') {
-                    return generateFilingsData(ticker);
-                } else if (analysisType === 'comprehensive') {
-                    return generateComprehensiveAnalysis(ticker);
-                } else {
-                    // Auto mode - let the agent decide based on query
-                    return simulateReActLoop(query, ticker);
-                }
-            }
-
-            function simulateReActLoop(query, ticker) {
-                // This simulates the ReAct loop reasoning process
-                const queryLower = query.toLowerCase();
-                let iterations = [];
-                let observations = [];
-                let thoughts = [];
-
-                // Iteration 1: Initial reasoning
-                let thought1;
-                if (queryLower.includes('price') || queryLower.includes('trading') || queryLower.includes('stock')) {
-                    thought1 = "User wants stock price/trading information. I need to get current stock data.";
-                    observations.push(generateStockData(ticker));
-                } else if (queryLower.includes('news') || queryLower.includes('latest') || queryLower.includes('recent')) {
-                    thought1 = "User wants recent news. I need to fetch news articles.";
-                    observations.push(generateNewsData(ticker));
-                } else if (queryLower.includes('filing') || queryLower.includes('regulatory') || queryLower.includes('sebi') || queryLower.includes('rbi')) {
-                    thought1 = "User wants regulatory/filing information. I need to search the document database.";
-                    observations.push(generateFilingsData(ticker));
-                } else {
-                    thought1 = "User asking general question. I should gather comprehensive information including stock data, news, and filings.";
-                    observations.push(generateStockData(ticker)); // Start with stock data
-                }
-                thoughts.push(thought1);
-                iterations.push({ thought: thought1, observation: observations[observations.length - 1] });
-
-                // Iteration 2: Decide if we need more information
-                let thought2;
-                const hasStock = observations.some(obs => obs.symbol !== undefined);
-                const hasNews = observations.some(obs => obs.articles_found !== undefined && obs.articles_found > 0);
-                const hasFilings = observations.some(obs => obs.results !== undefined && obs.results.length > 0);
-
-                if (hasStock && (!hasNews || queryLower.includes('news') || queryLower.includes('latest') || queryLower.includes('recent'))) {
-                    thought2 = "Got stock data. User might also want recent news for context.";
-                    observations.push(generateNewsData(ticker));
-                } else if (hasNews && (queryLower.includes('price') || queryLower.includes('trading'))) {
-                    thought2 = "Got news articles. User also asked about price/trading, so I should get stock data.";
-                    observations.push(generateStockData(ticker));
-                } else {
-                    thought2 = "I have gathered sufficient information to answer the user's question.";
-                }
-                thoughts.push(thought2);
-                iterations.push({ thought: thought2, observation: observations[observations.length - 1] });
-
-                // For demo, we'll stop after 2 iterations
-                return {
-                    query: query,
-                    ticker: ticker,
-                    iterations: iterations,
-                    stockData: hasStock ? observations.find(obs => obs.symbol !== undefined) : null,
-                    newsData: hasNews ? observations.find(obs => obs.articles_found !== undefined && obs.articles_found > 0) : null,
-                    filingsData: hasFilings ? observations.find(obs => obs.results !== undefined && obs.results.length > 0) : null
-                };
-            }
-
-            function generateStockData(ticker) {
-                return {
-                    symbol: ticker,
-                    short_name: `${ticker.split('.')[0]} LIMITED`,
-                    current_price: 1322.0,
-                    market_cap: 17889929199616,
-                    pe_ratio: 23.92,
-                    dividend_yield: 0.45,
-                    '52_week_high': 1611.8,
-                    '52_week_low': 1249.8,
-                    volume: 13031534,
-                    avg_volume: 12651705,
-                    currency: 'INR',
-                    exchange: 'NSI',
-                    last_updated: new Date().toISOString()
-                };
-            }
-
-            function generateNewsData(ticker) {
-                return {
-                    ticker: ticker,
-                    company_name: `${ticker.split('.')[0]} LIMITED`,
-                    articles_found: 3,
-                    articles: [
-                        {
-                            title: `${ticker.split('.')[0]} Announces Quarterly Results`,
-                            description: `Latest quarterly performance shows growth in key metrics...`,
-                            content: `Detailed analysis of the company's performance...`,
-                            source: 'Moneycontrol',
-                            publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                            url: '#'
-                        },
-                        {
-                            title: `Analysts Upgrade ${ticker.split('.')[0]} Target Price`,
-                            description: `Several brokerage firms have raised their target prices following strong performance...`,
-                            content: `Upgrade cites improved margins and market share gains...`,
-                            source: 'Economic Times',
-                            publishedAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-                            url: '#'
-                        },
-                        {
-                            title: `${ticker.split('.')[0]} Declares Dividend for Shareholders`,
-                            description: `The board has approved a dividend payout for the fiscal year...`,
-                            content: `Shareholders will receive ₹X per share as dividend...`,
-                            source: 'Business Standard',
-                            publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-                            url: '#'
-                        }
-                    ],
-                    sources: ['Moneycontrol', 'Economic Times', 'Business Standard'],
-                    last_updated: new Date().toISOString()
-                };
-            }
-
-            function generateFilingsData(ticker) {
-                return {
-                    query: `regulatory filings for ${ticker}`,
-                    ticker: ticker,
-                    results: [
-                        {
-                            content: `Recent SEBI filing shows ${ticker.split('.')[0]} has disclosed related party transactions for Q2 FY2027...`,
-                            metadata: {
-                                source_file: `sebi_rpt_${ticker.split('.')[0]}_202609.xml`,
-                                date: '2026-09-04',
-                                document_type: 'related_party_transaction'
-                            },
-                            relevance_score: 0.92
-                        },
-                        {
-                            content: `Quarterly compliance report submitted to RBI showing adequate capital reserves...`,
-                            metadata: {
-                                source_file: `rbi_compliance_${ticker.split('.')[0]}_202609.pdf`,
-                                date: '2026-09-03',
-                                document_type: 'regulatory_compliance'
-                            },
-                            relevance_score: 0.88
-                        }
-                    ],
-                    summary: `Found 2 relevant regulatory filings for ${ticker}.`
-                };
-            }
-
-            function generateComprehensiveAnalysis(ticker) {
-                return {
-                    query: `comprehensive analysis of ${ticker}`,
-                    ticker: ticker,
-                    stockData: generateStockData(ticker),
-                    newsData: generateNewsData(ticker),
-                    filingsData: generateFilingsData(ticker)
-                };
-            }
-
-            function displayResults(result) {
+            function displayAnswer(answer, ticker, query) {
                 let html = '';
 
-                // Show reasoning process if available (ReAct loop)
-                if (result.iterations) {
-                    html += '<div class="reasoning-process">';
-                    html += '<h3>🧠 Agent Reasoning Process (ReAct Loop)</h3>';
-                    result.iterations.forEach((iteration, index) => {
-                        html += `<div class="iteration">
-                            <h4>Step ${index + 1}: Reasoning</h4>
-                            <p><em>${iteration.thought}</em></p>
-                        </div>`;
-
-                        const obs = iteration.observation;
-                        if (obs) {
-                            let obsText = '';
-                            if (obs.symbol) {
-                                obsText = `Retrieved stock data for ${obs.symbol}: ₹${obs.current_price.toLocaleString()}`;
-                            } else if (obs.articles_found !== undefined) {
-                                obsText = `Found ${obs.articles_found} recent news articles`;
-                            } else if (obs.results !== undefined) {
-                                obsText = `Found ${obs.results.length} relevant regulatory filings`;
-                            } else {
-                                obsText = `Observation: ${JSON.stringify(obs).substring(0, 100)}...`;
-                            }
-                            html += `<div class="observation-action">
-                                <h4>→ Action Result:</h4>
-                                <p>${obsText}</p>
-                            </div>`;
-                        }
-                    });
-                    html += '</div>';
-                }
-
-                // Stock Information
-                if (result.stockData) {
-                    html += '<div class="stock-info">';
-                    html += '<h4>📈 Stock Information</h4>';
-                    html += '<div class="metrics">';
-                    html += `<div class="metric">
-                        <div class="metric-label">Current Price</div>
-                        <div class="metric-value">₹${result.stockData.current_price.toLocaleString()}</div>
-                        <div class="metric-unit">INR</div>
+                html += `
+                    <div class="agent-answer">
+                        <h3> Agent Response</h3>
+                        ${escapeHtml(answer)}
                     </div>`;
-                    html += `<div class="metric">
-                        <div class="metric-label">Market Cap</div>
-                        <div class="metric-value">₹${(result.stockData.market_cap / 10000000).toLocaleString()}</div>
-                        <div class="metric-unit">Crore INR</div>
+
+                html += `
+                    <div class="sources">
+                        <h4> Data Sources</h4>
+                        <div class="source-list">
+                            <div class="source-item">Stock data: Yahoo Finance (yfinance)</div>
+                            <div class="source-item">News: GNews &amp; Marketaux APIs</div>
+                            <div class="source-item">AI: Google Gemini</div>
+                        </div>
                     </div>`;
-                    html += `<div class="metric">
-                        <div class="metric-label">P/E Ratio</div>
-                        <div class="metric-value">${result.stockData.pe_ratio.toFixed(2)}</div>
-                    </div>`;
-                    html += `<div class="metric">
-                        <div class="metric-label">Dividend Yield</div>
-                        <div class="metric-value">${(result.stockData.dividend_yield * 100).toFixed(2)}%</div>
-                    </div>`;
-                    html += `<div class="metric">
-                        <div class="metric-label">52-Week High</div>
-                        <div class="metric-value">₹${result.stockData['52_week_high'].toLocaleString()}</div>
-                    </div>`;
-                    html += `<div class="metric">
-                        <div class="metric-label">52-Week Low</div>
-                        <div class="metric-value">₹${result.stockData['52_week_low'].toLocaleString()}</div>
-                    </div>`;
-                    html += `<div class="metric">
-                        <div class="metric-label">Volume</div>
-                        <div class="metric-value">${result.stockData.volume.toLocaleString()}</div>
-                    </div>`;
-                    html += '</div>';
-                    html += `<p class="data-source">Data sourced from Yahoo Finance (yfinance) • Last updated: ${new Date(result.stockData.last_updated).toLocaleString()}</p>`;
-                    html += '</div>';
-                }
 
-                // News Section
-                if (result.newsData && result.newsData.articles_found > 0) {
-                    html += '<div class="news-section">';
-                    html += '<h4>📰 Recent News</h4>';
-                    result.newsData.articles.forEach((article, index) => {
-                        if (index >= 3) return; // Show max 3 articles
-                        html += `<div class="article">
-                            <h5>${article.title}</h5>
-                            <div class="article-meta">
-                                <span>${article.source}</span>
-                                <span>${new Date(article.publishedAt).toLocaleDateString()}</span>
-                            </div>
-                            <p class="article-summary">${article.description}</p>
-                            <a href="${article.url}" target="_blank" class="article-link">Read full article →</span>
-                        </div>`;
-                    });
-                    html += '</div>';
-                }
+                resultsDiv.innerHTML = html;
+                resultsDiv.style.display = 'block';
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
 
-                // Filings Section
-                if (result.filingsData && result.filingsData.results.length > 0) {
-                    html += '<div class="filings-section">';
-                    html += '<h4>📑 Regulatory Filings</h4>';
-                    result.filingsData.results.forEach((filing, index) => {
-                        if (index >= 2) return; // Show max 2 filings
-                        html += `<div class="filing">
-                            <h5>${filing.metadata?.source_file || 'Financial Document'}</h5>
-                            <div class="filing-meta">
-                                <span>Relevance: ${(filing.relevance_score * 100).toFixed(1)}%</span>
-                                ${filing.metadata.date ? `<span>${filing.metadata.date}</span>` : ''}
-                            </div>
-                            <p class="filing-summary">${filing.content}</p>
-                            ${filing.metadata?.source_file ? `<a href="#" class="filing-link">View filing details →</a>` : ''}
-                        </div>`;
-                    });
-                    html += '</div>';
-                }
-
-                // Synthesis
-                html += '<div class="synthesis">';
-                html += '<h4>🔍 Synthesis & Analysis</h4>';
-
-                if (result.stockData) {
-                    html += `<p><strong>${result.stockData.short_name}</strong> is currently trading at <strong>₹${result.stockData.current_price.toLocaleString()}</strong> with a market capitalization of <strong>₹${(result.stockData.market_cap / 10000000).toLocaleString()} Crore</strong>.</p>`;
-
-                    const peRatio = result.stockData.pe_ratio;
-                    if (peRatio > 25) {
-                        html += `<p>The P/E ratio of <strong>${peRatio.toFixed(2)}</strong> suggests the stock may be relatively expensive compared to historical averages.</p>`;
-                    } else if (peRatio < 15) {
-                        html += `<p>The P/E ratio of <strong>${peRatio.toFixed(2)}</strong> suggests the stock may be relatively inexpensive compared to historical averages.</p>`;
-                    } else {
-                        html += `<p>The P/E ratio of <strong>${peRatio.toFixed(2)}</strong> is in a moderate range, suggesting fair valuation relative to earnings.</p>`;
-                    }
-                }
-
-                if (result.newsData && result.newsData.articles_found > 0) {
-                    html += `<p>Recent news shows <strong>${result.newsData.articles_found}</strong> articles covering various developments including quarterly results, analyst upgrades, and corporate announcements.</p>`;
-                }
-
-                if (result.filingsData && result.filingsData.results.length > 0) {
-                    html += `<p>Regulatory filings show <strong>${result.filingsData.results.length}</strong> compliance documents have been recently submitted, indicating active regulatory engagement.</p>`;
-                }
-
-                html += '</div>';
-
-                // Sources
-                html += '<div class="sources">';
-                html += '<h4>📚 Data Sources</h4>';
-                html += '<div class="source-list">';
-                html += '<div class="source-item">Stock data: Yahoo Finance (yfinance)</div>';
-                html += '<div class="source-item">News: GNews and Marketaux APIs</div>';
-                html += '<div class="source-item">Filings: Local RAG pipeline with ChromaDB</div>';
-                html += '</div>';
-                html += '</div>';
-
-                results.innerHTML = html;
+            function escapeHtml(text) {
+                if (!text) return '';
+                // Convert markdown-like bold and newlines to HTML
+                return text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br>');
             }
         });
     </script>

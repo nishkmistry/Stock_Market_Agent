@@ -1,287 +1,328 @@
 """
-Orchestration loop for the Finance Agent using Gemini API function calling.
-Implements a ReAct-style loop where the LLM decides which tools to call and processes results.
+Orchestration loop for the Finance Agent using Groq API (free tier).
+Implements a ReAct-style loop with OpenAI-compatible tool calling.
+Includes exponential backoff retry logic for rate limit and overload errors.
 """
 
 import os
 import json
 import sys
 import time
-from typing import Dict, List, Any, Optional
-from google import genai
-from google.genai import types
+import random
+from typing import Dict, Any, List, Optional
+from groq import Groq, RateLimitError, APIStatusError, APIConnectionError
 from dotenv import load_dotenv
 from tools import get_stock_overview, get_news, query_filings_rag
 
 # Load environment variables
 load_dotenv()
 
-# Initialize Gemini client
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Initialize Groq client
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# Define function declarations using the proper types
-get_stock_overview_declaration = types.FunctionDeclaration(
-    name="get_stock_overview",
-    description="Get comprehensive stock overview data for a given ticker symbol including price, market cap, P/E ratio, etc.",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "ticker": types.Schema(
-                type=types.Type.STRING,
-                description="Stock ticker symbol (e.g., 'RELIANCE.NS' for NSE, 'RELIANCE.BO' for BSE, 'AAPL' for US)"
-            )
-        },
-        required=["ticker"]
-    )
-)
+# Models to try in order of preference (confirmed tool calling support)
+MODELS_TO_TRY = [
+    "qwen/qwen3.8-27b",
+    "qwen/qwen3.6-27b",
+]
 
-get_news_declaration = types.FunctionDeclaration(
-    name="get_news",
-    description="Get recent news articles for a given stock ticker from financial news sources",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "ticker": types.Schema(
-                type=types.Type.STRING,
-                description="Stock ticker symbol"
-            ),
-            "limit": types.Schema(
-                type=types.Type.INTEGER,
-                description="Maximum number of news articles to return (default: 10)",
-                default=10
-            )
-        },
-        required=["ticker"]
-    )
-)
+# System prompt for the finance agent
+SYSTEM_PROMPT = """You are a specialized financial research agent for Indian and global markets.
+Your goal is to provide comprehensive investment research by using available tools to gather
+stock data, news, and regulatory filings.
 
-query_filings_rag_declaration = types.FunctionDeclaration(
-    name="query_filings_rag",
-    description="Query the RAG pipeline for NSE/BSE/RBI regulatory filings and documents",
-    parameters=types.Schema(
-        type=types.Type.OBJECT,
-        properties={
-            "query": types.Schema(
-                type=types.Type.STRING,
-                description="Search query for relevant documents"
-            ),
-            "ticker": types.Schema(
-                type=types.Type.STRING,
-                description="Optional: Filter results by specific ticker symbol"
-            )
-        },
-        required=["query"]
-    )
-)
+When answering:
+1. Start by understanding what information is needed
+2. Use tools strategically to gather relevant data
+3. Synthesize information from multiple sources
+4. Provide clear, well-sourced answers
+5. If you need more information, continue using tools
+6. Always cite your sources from the tool outputs
 
-# Create a tool containing these function declarations
-stock_tool = types.Tool(
-    function_declarations=[get_stock_overview_declaration, get_news_declaration, query_filings_rag_declaration]
-)
+Available tools:
+- get_stock_overview: Get current stock data and metrics
+- get_news: Get recent financial news
+- query_filings_rag: Search regulatory documents and filings
 
-# Configure the tool usage
-tool_config = types.ToolConfig(
-    function_calling_config=types.FunctionCallingConfig(
-        mode=types.FunctionCallingConfigMode.AUTO
-    )
-)
+Think step by step and use tools as needed to answer the user's question comprehensively."""
 
-# Create generate content config
-# Try gemini-2.5-flash which might have better quota availability
-generate_content_config = types.GenerateContentConfig(
-    tools=[stock_tool],
-    tool_config=tool_config
-)
+# Tool definitions in OpenAI/Groq format
+TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_overview",
+            "description": "Get comprehensive stock overview data for a given ticker symbol including price, market cap, P/E ratio, etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., 'RELIANCE.NS' for NSE, 'RELIANCE.BO' for BSE, 'AAPL' for US)"
+                    }
+                },
+                "required": ["ticker"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_news",
+            "description": "Get recent news articles for a given stock ticker from financial news sources",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "ticker": {
+                        "type": "string",
+                        "description": "Stock ticker symbol"
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of news articles to return (default: 10)"
+                    }
+                },
+                "required": ["ticker"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_filings_rag",
+            "description": "Query the RAG pipeline for NSE/BSE/RBI regulatory filings and documents",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query for relevant documents"
+                    },
+                    "ticker": {
+                        "type": "string",
+                        "description": "Optional: Filter results by specific ticker symbol"
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    }
+]
+
+# Retry configuration
+MAX_RETRIES = 4
+BASE_DELAY = 5
+MAX_DELAY = 60
+
+
+def _is_rate_limit_error(error: Exception) -> bool:
+    """Check if the error is a rate limit error (429)."""
+    if isinstance(error, RateLimitError):
+        return True
+    return "429" in str(error) or "rate_limit" in str(error).lower()
+
+
+def _is_overload_error(error: Exception) -> bool:
+    """Check if the error is a service overload error (503)."""
+    if isinstance(error, APIStatusError) and error.status_code in (503, 529):
+        return True
+    return "503" in str(error) or "overloaded" in str(error).lower()
+
+
+def _is_retryable_error(error: Exception) -> bool:
+    """Check if the error is worth retrying."""
+    return _is_rate_limit_error(error) or _is_overload_error(error)
+
+
+def _is_model_unavailable(error: Exception) -> bool:
+    """Check if this specific model is unavailable / not found."""
+    if isinstance(error, APIStatusError) and error.status_code == 404:
+        return True
+    err = str(error).lower()
+    return "not found" in err or "model_not_found" in err or "404" in str(error)
+
 
 def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Execute a tool function with the given input.
-
-    Args:
-        tool_name (str): Name of the tool to execute
-        tool_input (Dict[str, Any]): Input parameters for the tool
-
-    Returns:
-        Dict[str, Any]: Tool execution result
-    """
-    # Map tool names to actual functions
+    """Execute a tool function with the given input."""
     TOOL_FUNCTIONS = {
         "get_stock_overview": get_stock_overview,
         "get_news": get_news,
-        "query_filings_rag": query_filings_rag
+        "query_filings_rag": query_filings_rag,
     }
 
     if tool_name not in TOOL_FUNCTIONS:
         return {"error": f"Unknown tool: {tool_name}"}
 
     try:
-        func = TOOL_FUNCTIONS[tool_name]
-        result = func(**tool_input)
-        return result
+        return TOOL_FUNCTIONS[tool_name](**tool_input)
     except Exception as e:
         return {"error": f"Tool execution failed: {str(e)}"}
 
+
+def _call_groq_with_retry(
+    model: str,
+    messages: List[Dict],
+    label: str = "API call"
+) -> Any:
+    """
+    Call Groq API with exponential backoff on rate limit / overload errors.
+    Raises on non-retryable errors or after MAX_RETRIES exhausted.
+    """
+    delay = BASE_DELAY
+
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            return client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=TOOLS,
+                tool_choice="auto",
+                max_tokens=4096,
+                temperature=0.1,
+            )
+        except Exception as e:
+            if _is_retryable_error(e):
+                if attempt == MAX_RETRIES:
+                    print(f"[retry] {label} failed after {MAX_RETRIES} retries. Giving up.")
+                    raise
+
+                jitter = random.uniform(0, delay * 0.3)
+                wait = min(delay + jitter, MAX_DELAY)
+                reason = "rate limit (429)" if _is_rate_limit_error(e) else "overloaded (503)"
+                print(f"[retry] {label} — {reason} (attempt {attempt}/{MAX_RETRIES}). "
+                      f"Waiting {wait:.1f}s before retry…")
+                time.sleep(wait)
+                delay = min(delay * 2, MAX_DELAY)
+            else:
+                raise
+
+
 def run_agent_loop(user_query: str, max_iterations: int = 10) -> str:
     """
-    Run the agent loop where the LLM decides which tools to call.
+    Run the ReAct agent loop using Groq with tool calling.
 
     Args:
         user_query (str): The user's question or request
-        max_iterations (int): Maximum number of tool call iterations to prevent infinite loops
+        max_iterations (int): Maximum number of tool call iterations
 
     Returns:
         str: Final response from the agent
     """
-    # Initialize conversation with system prompt and user query
-    system_prompt = """You are a specialized financial research agent for Indian and global markets.
-    Your goal is to provide comprehensive investment research by using available tools to gather
-    stock data, news, and regulatory filings.
-
-    When answering:
-    1. Start by understanding what information is needed
-    2. Use tools strategically to gather relevant data
-    3. Synthesize information from multiple sources
-    4. Provide clear, well-sourced answers
-    5. If you need more information, continue using tools
-    6. Always cite your sources from the tool outputs
-
-    Available tools:
-    - get_stock_overview: Get current stock data and metrics
-    - get_news: Get recent financial news
-    - query_filings_rag: Search regulatory documents and filings
-
-    Think step by step and use tools as needed to answer the user's question comprehensively."""
-
-    # Start a chat with the model using proper config
-    # Try different models in order of preference
-    models_to_try = [
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        "gemini-3.6-flash",
-        "gemini-flash-latest"
-    ]
-
-    chat = None
-    last_error = None
-
-    for model_name in models_to_try:
+    # Pick a working model from the list
+    active_model: Optional[str] = None
+    for model_name in MODELS_TO_TRY:
         try:
-            chat = client.chats.create(
+            # Probe with a tiny request to validate model availability
+            client.chat.completions.create(
                 model=model_name,
-                config=generate_content_config
+                messages=[{"role": "user", "content": "hi"}],
+                max_tokens=5,
             )
-            # Test the connection with a simple message
-            chat.send_message("test")
-            break  # Success, exit the loop
+            active_model = model_name
+            print(f"[agent] Using model: {active_model}")
+            break
         except Exception as e:
-            last_error = e
-            continue  # Try next model
+            if _is_model_unavailable(e):
+                print(f"[agent] Model {model_name} not found, trying next…")
+                continue
+            elif _is_retryable_error(e):
+                print(f"[agent] Model {model_name} overloaded, trying next…")
+                continue
+            else:
+                # Use it anyway — the real call may still work
+                active_model = model_name
+                print(f"[agent] Using model: {active_model} (probe failed: {e})")
+                break
 
-    if chat is None:
-        # If all models failed, return error message
-        if last_error and "RESOURCE_EXHAUSTED" in str(last_error):
-            return "Agent temporarily unavailable due to API quota limits. Please try again in a few minutes."
-        else:
-            return f"Failed to initialize agent: {str(last_error)}"
+    if active_model is None:
+        return (
+            " No Groq models are currently available. "
+            "Please wait a moment and try again."
+        )
 
-    # Add system prompt as initial context
-    try:
-        chat.send_message(system_prompt)
-    except Exception as e:
-        if "RESOURCE_EXHAUSTED" in str(e):
-            return "Agent temporarily unavailable due to API quota limits. Please try again in a few minutes."
-        else:
-            return f"Error in agent loop: {str(e)}"
-
-    # Add user query
-    try:
-        response = chat.send_message(user_query)
-    except Exception as e:
-        if "RESOURCE_EXHAUSTED" in str(e):
-            return "Agent temporarily unavailable due to API quota limits. Please try again in a few minutes."
-        else:
-            return f"Error in agent loop: {str(e)}"
-
-    # Track tool calls for transparency
-    tool_call_history = []
+    # Build conversation messages
+    messages: List[Dict] = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_query},
+    ]
 
     for iteration in range(max_iterations):
         try:
-            # Check if the response contains a function call
-            # Handle the case where function_calls might be None
-            function_calls = getattr(response, 'function_calls', None) or []
-
-            if function_calls:
-                # Process tool calls
-                function_responses = []
-
-                for fc in function_calls:
-                    tool_name = fc.name
-                    tool_input = dict(fc.args)  # Convert to dict
-
-                    # Record tool call
-                    tool_call_record = {
-                        "iteration": iteration + 1,
-                        "tool": tool_name,
-                        "input": tool_input
-                    }
-                    tool_call_history.append(tool_call_record)
-
-                    # Execute the tool
-                    tool_result = execute_tool(tool_name, tool_input)
-
-                    # Record tool result
-                    tool_result_record = {
-                        "iteration": iteration + 1,
-                        "tool": tool_name,
-                        "result": tool_result
-                    }
-
-                    # Prepare tool result for Gemini
-                    function_responses.append(
-                        types.Part(
-                            function_response=types.FunctionResponse(
-                                name=tool_name,
-                                response={"result": json.dumps(tool_result)}
-                            )
-                        )
-                    )
-
-                # Send function responses back to the model
-                try:
-                    response = chat.send_message(function_responses)
-                except Exception as e:
-                    if "RESOURCE_EXHAUSTED" in str(e):
-                        return "Agent temporarily unavailable due to API quota limits. Please try again in a few minutes."
-                    else:
-                        return f"Error in agent loop: {str(e)}"
-                continue
-
-            # If we get here, there are no function calls, so we have a final answer
-            final_answer = response.text
-            return final_answer
-
+            response = _call_groq_with_retry(
+                active_model,
+                messages,
+                label=f"Groq call (iteration {iteration + 1})"
+            )
         except Exception as e:
-            if "RESOURCE_EXHAUSTED" in str(e):
-                return "Agent temporarily unavailable due to API quota limits. Please try again in a few minutes."
-            else:
-                return f"Error in agent loop: {str(e)}"
+            if _is_retryable_error(e):
+                reason = "rate limit" if _is_rate_limit_error(e) else "service overload"
+                return (
+                    f" Groq API {reason} — retried {MAX_RETRIES} times but persists. "
+                    "Please wait a few minutes and try again."
+                )
+            return f"Error calling Groq: {str(e)}"
 
-    # If we've exceeded max iterations
-    return f"Agent reached maximum iterations ({max_iterations}) without completing. Consider simplifying your query."
+        choice = response.choices[0]
+        message = choice.message
 
-# For testing the agent loop directly
+        # Add assistant message to history
+        messages.append({
+            "role": "assistant",
+            "content": message.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                }
+                for tc in (message.tool_calls or [])
+            ] or None
+        })
+
+        # If the model wants to call tools
+        if choice.finish_reason == "tool_calls" and message.tool_calls:
+            for tool_call in message.tool_calls:
+                tool_name = tool_call.function.name
+                try:
+                    tool_input = json.loads(tool_call.function.arguments)
+                except json.JSONDecodeError:
+                    tool_input = {}
+
+                print(f"[agent] Calling tool: {tool_name} with input: {tool_input}")
+                result = execute_tool(tool_name, tool_input)
+
+                # Send tool result back
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(result, default=str),
+                })
+            continue
+
+        # No more tool calls — return the final answer
+        if message.content:
+            return message.content
+
+        return "Agent completed without producing a response."
+
+    return (
+        f"Agent reached maximum iterations ({max_iterations}) without completing. "
+        "Consider simplifying your query."
+    )
+
+
+# For testing directly
 if __name__ == "__main__":
-    # Test the agent with a simple query
     test_query = "What's RELIANCE.NS trading at right now?"
     print("Testing agent loop with query:", test_query)
     print("=" * 50)
     result = run_agent_loop(test_query)
     print("Final Answer:")
-    # Handle potential Unicode encoding issues on Windows
     try:
         print(result)
     except UnicodeEncodeError:
-        # Fallback for Windows console encoding issues
-        sys.stdout.buffer.write(result.encode('utf-8') + b'\n')
+        sys.stdout.buffer.write(result.encode("utf-8") + b"\n")
     print("=" * 50)

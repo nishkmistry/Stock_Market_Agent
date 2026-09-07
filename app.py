@@ -1,120 +1,71 @@
 """
-Streamlit demo for the Finance Agent
-Provides a simple interface for users to input a ticker and get investment research
+Flask API backend for the Finance Agent.
+Exposes a REST endpoint that the frontend uses to call the real Gemini-powered agent.
 """
 
-import streamlit as st
-from agent import run_agent_loop
 import os
+import json
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 from dotenv import load_dotenv
+from agent import run_agent_loop
 
-# Load environment variables
 load_dotenv()
 
-# Page configuration
-st.set_page_config(
-    page_title="Finance Agent - Investment Research",
-    page_icon="📈",
-    layout="wide"
-)
+app = Flask(__name__, static_folder=".", static_url_path="")
+CORS(app)  # Allow cross-origin requests during development
 
-# Title and description
-st.title("🤖 Finance Agent - Autonomous Investment Research")
-st.markdown("""
-This agent performs autonomous investment research on stock tickers using:
-- **Stock data** from Yahoo Finance (NSE/BSE with .NS/.BO suffixes, global tickers)
-- **Financial news** from GNews and Marketaux APIs
-- **Regulatory filings** from NSE/BSE/RBI via RAG pipeline
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-Enter a stock ticker to get started.
-""")
 
-# Sidebar for API key status
-with st.sidebar:
-    st.header("🔑 API Status")
+@app.route("/")
+def index():
+    """Serve the main HTML frontend."""
+    return send_from_directory(BASE_DIR, "index.html")
 
-    # Check if API keys are loaded
-    anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-    gnews_key = os.getenv("GNEWS_API_KEY")
-    marketaaux_key = os.getenv("MARKETAUX_API_KEY")
 
-    st.write("Anthropic API:", "✅ Loaded" if anthropic_key else "❌ Missing")
-    st.write("GNews API:", "✅ Loaded" if gnews_key else "❌ Missing")
-    st.write("Marketaux API:", "✅ Loaded" if marketaaux_key else "❌ Missing")
+@app.route("/api/analyze", methods=["POST"])
+def analyze():
+    """
+    Run the finance agent on a user query.
 
-    if not all([anthropic_key, gnews_key, marketaaux_key]):
-        st.warning("⚠️ Some API keys are missing. Please check your .env file.")
-        st.info("Copy .env.example to .env and fill in your API keys.")
+    Request body (JSON):
+        query (str): The user's investment question
+        ticker (str, optional): Stock ticker symbol (already formatted, e.g. RELIANCE.NS)
 
-    st.divider()
-    st.header("📊 Example Queries")
-    st.markdown("""
-    - "What's RELIANCE.NS trading at right now?"
-    - "Analyze TCS.BO for investment potential"
-    - "Get latest news about INFY.NS"
-    - "Compare HDFCBANK.NS and ICICIBANK.NS"
-    """)
+    Returns:
+        JSON with 'answer' field containing the agent's response.
+    """
+    try:
+        data = request.get_json(force=True)
+        if not data:
+            return jsonify({"error": "Request body must be JSON"}), 400
 
-# Main interface
-st.header("🔍 Stock Research Query")
+        query = data.get("query", "").strip()
+        if not query:
+            return jsonify({"error": "Field 'query' is required and cannot be empty"}), 400
 
-# Input for ticker and query
-col1, col2 = st.columns([1, 2])
+        # Run the agent
+        answer = run_agent_loop(query)
 
-with col1:
-    ticker_input = st.text_input(
-        "Stock Ticker (optional)",
-        placeholder="e.g., RELIANCE.NS",
-        help="Enter a stock ticker symbol. Use .NS for NSE, .BO for BSE"
-    )
+        return jsonify({"answer": answer, "query": query})
 
-with col2:
-    query_input = st.text_area(
-        "Research Question",
-        placeholder="What would you like to know about this stock?",
-        height=100,
-        help="Ask any investment research question"
-    )
+    except Exception as e:
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-# Combine ticker and query if ticker is provided
-if ticker_input and query_input:
-    full_query = f"Regarding {ticker_input.upper()}: {query_input}"
-elif ticker_input:
-    full_query = f"Analyze {ticker_input.upper()} for investment decision"
-elif query_input:
-    full_query = query_input
-else:
-    full_query = ""
 
-# Generate report button
-if st.button("🚀 Generate Research Report", type="primary", disabled=not full_query):
-    if not full_query:
-        st.error("Please enter either a ticker or a research question")
-    else:
-        # Show loading spinner
-        with st.spinner("🤖 Agent is researching... This may take a moment"):
-            try:
-                # Run the agent loop
-                result = run_agent_loop(full_query)
+@app.route("/api/health", methods=["GET"])
+def health():
+    """Health check endpoint."""
+    api_key_set = bool(os.getenv("GEMINI_API_KEY"))
+    return jsonify({
+        "status": "ok",
+        "gemini_api_key_configured": api_key_set
+    })
 
-                # Display results
-                st.header("📋 Research Report")
-                st.markdown(result)
 
-                # Add download button
-                st.download_button(
-                    label="💾 Download Report",
-                    data=result,
-                    file_name=f"finance_agent_report_{ticker_input if ticker_input else 'general'}.txt",
-                    mime="text/plain"
-                )
-
-            except Exception as e:
-                st.error(f"An error occurred: {str(e)}")
-                st.info("Please check your API keys and try again.")
-
-# Footer
-st.divider()
-st.markdown("""
-<small>Finance Agent v1.0 - Built for educational purposes. Not financial advice.</small>
-""", unsafe_allow_html=True)
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 5000))
+    print(f"Starting Finance Agent server on http://localhost:{port}")
+    print("Press Ctrl+C to stop")
+    app.run(host="0.0.0.0", port=port, debug=False)
