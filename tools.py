@@ -259,18 +259,61 @@ def query_filings_rag(query: str, ticker: str = None) -> Dict[str, Any]:
     """
     Query the RAG pipeline for NSE/BSE/RBI regulatory filings and documents.
 
+    Automatically fetches live filings from BSE, NSE and RBI for the given
+    ticker (or refreshes the 24-hour cache) before performing a semantic search.
+
     Args:
-        query (str): Search query for relevant documents
-        ticker (str, optional): Filter results by specific ticker
+        query (str): Natural-language search query
+        ticker (str, optional): Stock ticker (e.g. 'RELIANCE.NS') to focus results.
+                                RBI macro documents are always included.
 
     Returns:
-        Dict[str, Any]: Retrieved document chunks with metadata
+        Dict[str, Any]: {
+            query:          original query string,
+            ticker:         ticker filter used (if any),
+            results_count:  number of chunks returned,
+            results:        list of { text, source, date, ticker, url, similarity_score },
+            note:           informational message
+        }
     """
-    # TODO: Implement RAG pipeline with ChromaDB
-    return {
-        "error": "RAG tool not yet implemented",
-        "query": query
-    }
+    try:
+        from rag.retriever import ensure_data, search
+
+        # Auto-fetch + ingest if data is stale or missing
+        if ticker:
+            ensure_data(ticker)
+
+        results = search(query, ticker=ticker)
+
+        if not results:
+            return {
+                "query":         query,
+                "ticker":        ticker,
+                "results_count": 0,
+                "results":       [],
+                "note": (
+                    "No relevant documents found. "
+                    "Try a broader query or check that the ticker is listed on NSE/BSE."
+                ),
+            }
+
+        return {
+            "query":         query,
+            "ticker":        ticker,
+            "results_count": len(results),
+            "results":       results,
+            "note": (
+                f"Results from BSE/NSE corporate filings and RBI documents. "
+                f"Data is cached for 24 hours."
+            ),
+        }
+
+    except Exception as e:
+        return {
+            "error":  f"RAG pipeline error: {str(e)}",
+            "query":  query,
+            "ticker": ticker,
+        }
 
 
 if __name__ == "__main__":

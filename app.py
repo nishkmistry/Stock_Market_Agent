@@ -1,16 +1,24 @@
-"""
-Flask API backend for the Finance Agent.
-Exposes a REST endpoint that the frontend uses to call the real Gemini-powered agent.
-"""
-
 import os
 import json
+import threading
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from agent import run_agent_loop
 
 load_dotenv()
+
+def _prewarm():
+    """Load the embedding model and ChromaDB into memory at startup."""
+    try:
+        from rag.ingest import _get_model, _get_collection
+        _get_collection()
+        _get_model()
+        print("[startup] Embedding model + ChromaDB pre-warmed.")
+    except Exception as e:
+        print(f"[startup] Pre-warm failed (non-fatal): {e}")
+
+threading.Thread(target=_prewarm, daemon=True).start()
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)  # Allow cross-origin requests during development

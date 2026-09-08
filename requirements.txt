@@ -5,6 +5,8 @@ flask-cors>=4.0.0
 requests>=2.28.0
 python-dotenv>=1.0.0
 
-# Optional: Only needed if you implement the RAG pipeline in query_filings_rag()
-# chromadb>=0.4.0
-# sentence-transformers>=2.2.0
+# RAG pipeline dependencies
+chromadb>=0.4.0
+sentence-transformers>=2.2.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
