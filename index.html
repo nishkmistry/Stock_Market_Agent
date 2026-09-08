@@ -7,6 +7,7 @@
     <meta name="description" content="AI-powered autonomous investment research assistant using Gemini and the ReAct reasoning loop for Indian and global stock markets.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -566,12 +567,185 @@
             text-align: left;
         }
 
+        /* ── Agent Answer (markdown rendered) ── */
+        .agent-answer-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(30,60,114,0.10);
+            border: 1px solid #e0e8f5;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .agent-answer-header {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .agent-answer-header span {
+            font-weight: 600;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .copy-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            font-family: inherit;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover { background: rgba(255,255,255,0.28); }
+
+        .agent-answer-body {
+            padding: 28px 32px;
+            line-height: 1.75;
+            color: #1a1a2e;
+            font-size: 0.97rem;
+        }
+
+        /* Markdown element styles */
+        .agent-answer-body h1,
+        .agent-answer-body h2 {
+            color: #1e3c72;
+            font-weight: 700;
+            margin: 28px 0 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e8eef7;
+        }
+
+        .agent-answer-body h1 { font-size: 1.5rem; }
+        .agent-answer-body h2 { font-size: 1.25rem; }
+
+        .agent-answer-body h3 {
+            color: #2a5298;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 20px 0 8px;
+        }
+
+        .agent-answer-body h4,
+        .agent-answer-body h5 {
+            color: #374151;
+            font-weight: 600;
+            margin: 16px 0 6px;
+        }
+
+        .agent-answer-body p {
+            margin-bottom: 14px;
+        }
+
+        .agent-answer-body ul,
+        .agent-answer-body ol {
+            margin: 10px 0 16px 24px;
+        }
+
+        .agent-answer-body li {
+            margin-bottom: 6px;
+        }
+
+        .agent-answer-body strong { color: #1e3c72; }
+
+        .agent-answer-body a {
+            color: #2a5298;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+        }
+
+        .agent-answer-body blockquote {
+            border-left: 4px solid #2a5298;
+            background: #f0f5ff;
+            margin: 16px 0;
+            padding: 14px 20px;
+            border-radius: 0 10px 10px 0;
+            color: #374151;
+            font-style: italic;
+        }
+
+        .agent-answer-body code {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 5px;
+            padding: 2px 7px;
+            font-size: 0.88em;
+            font-family: 'Courier New', monospace;
+            color: #c0392b;
+        }
+
+        .agent-answer-body pre {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+
+        .agent-answer-body pre code {
+            background: none;
+            border: none;
+            color: #e2e8f0;
+            padding: 0;
+            font-size: 0.9em;
+        }
+
+        /* Tables */
+        .agent-answer-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 0.93rem;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+        }
+
+        .agent-answer-body th {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .agent-answer-body td {
+            padding: 11px 16px;
+            border-bottom: 1px solid #e8eef7;
+            color: #374151;
+        }
+
+        .agent-answer-body tr:nth-child(even) td {
+            background: #f8faff;
+        }
+
+        .agent-answer-body tr:last-child td {
+            border-bottom: none;
+        }
+
+        .agent-answer-body hr {
+            border: none;
+            border-top: 2px solid #e8eef7;
+            margin: 24px 0;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             main { padding: 24px; }
             .query-input { flex-direction: column; }
             .input-group { flex-direction: column; min-width: 100%; }
             header h1 { font-size: 2rem; }
+            .agent-answer-body { padding: 20px; }
         }
 
         @media (max-width: 480px) {
@@ -761,39 +935,47 @@
             }
 
             function displayAnswer(answer, ticker, query) {
-                let html = '';
+                // Configure marked.js for clean rendering
+                marked.setOptions({
+                    breaks: true,       // \n → <br>
+                    gfm: true,          // GitHub-Flavoured Markdown (tables, strikethrough, etc.)
+                });
 
-                html += `
-                    <div class="agent-answer">
-                        <h3> Agent Response</h3>
-                        ${escapeHtml(answer)}
-                    </div>`;
+                const renderedHtml = marked.parse(answer);
+                const timestamp = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
-                html += `
+                const html = `
+                    <div class="agent-answer-card">
+                        <div class="agent-answer-header">
+                            <span>&#129302; Agent Response &nbsp;&mdash;&nbsp; ${ticker} &nbsp;<small style="opacity:0.7;font-weight:400;">${timestamp}</small></span>
+                            <button class="copy-btn" id="copy-btn">&#128203; Copy</button>
+                        </div>
+                        <div class="agent-answer-body" id="answer-body">
+                            ${renderedHtml}
+                        </div>
+                    </div>
                     <div class="sources">
-                        <h4> Data Sources</h4>
+                        <h4>&#128202; Data Sources</h4>
                         <div class="source-list">
-                            <div class="source-item">Stock data: Yahoo Finance (yfinance)</div>
-                            <div class="source-item">News: GNews &amp; Marketaux APIs</div>
-                            <div class="source-item">AI: Google Gemini</div>
+                            <div class="source-item">&#128200; Yahoo Finance</div>
+                            <div class="source-item">&#128240; GNews &amp; Marketaux</div>
+                            <div class="source-item">&#127981; BSE Filings</div>
+                            <div class="source-item">&#127981; RBI Press Releases</div>
+                            <div class="source-item">&#129302; Groq AI</div>
                         </div>
                     </div>`;
 
                 resultsDiv.innerHTML = html;
                 resultsDiv.style.display = 'block';
                 resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
 
-            function escapeHtml(text) {
-                if (!text) return '';
-                // Convert markdown-like bold and newlines to HTML
-                return text
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    .replace(/\n/g, '<br>');
+                // Copy button
+                document.getElementById('copy-btn').addEventListener('click', function () {
+                    navigator.clipboard.writeText(answer).then(() => {
+                        this.textContent = '&#10003; Copied!';
+                        setTimeout(() => { this.innerHTML = '&#128203; Copy'; }, 2000);
+                    });
+                });
             }
         });
     </script>
