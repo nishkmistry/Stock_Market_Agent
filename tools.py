@@ -12,6 +12,26 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 
+
+
+def _format_dividend_yield(raw_yield) -> str:
+    """
+    yfinance returns dividendYield inconsistently:
+    - Some tickers: decimal fraction  (e.g. 0.0046  → 0.46%)
+    - Some Indian tickers: already %  (e.g. 1.83    → 1.83%)
+    Heuristic: if the raw value > 0.5 it is already a percentage.
+    A genuine dividend yield above 50% is essentially impossible.
+    """
+    if not raw_yield:
+        return "0.00%"
+    val = float(raw_yield)
+    if val > 0.5:          # already in percentage form
+        pct = round(val, 2)
+    else:                  # decimal form – multiply by 100
+        pct = round(val * 100, 2)
+    return f"{pct}%"
+
+
 def get_stock_overview(ticker: str) -> Dict[str, Any]:
     """
     Get comprehensive stock overview data for a given ticker symbol.
@@ -65,7 +85,7 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
             "current_price": round(float(latest_data["Close"]), 2),
             "market_cap": info.get("marketCap", 0),
             "pe_ratio": info.get("trailingPE", None),
-            "dividend_yield": round(info.get("dividendYield", 0) * 100, 4) if info.get("dividendYield") else 0,
+            "dividend_yield": _format_dividend_yield(info.get("dividendYield")),
             "52_week_high": info.get("fiftyTwoWeekHigh", None),
             "52_week_low": info.get("fiftyTwoWeekLow", None),
             "volume": int(latest_data["Volume"]),

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Finance Agent - Autonomous Investment Research</title>
-    <meta name="description" content="AI-powered autonomous investment research assistant using Gemini and the ReAct reasoning loop for Indian and global stock markets.">
+    <meta name="description" content="AI-powered autonomous investment research assistant using Groq and the ReAct reasoning loop for Indian and global stock markets.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -758,7 +758,7 @@
     <div class="container">
         <header>
             <h1> Finance Agent</h1>
-            <p>Autonomous Investment Research Assistant powered by Gemini AI using the ReAct (Reasoning and Acting) Loop</p>
+            <p>Autonomous Investment Research Assistant powered by Groq AI using the ReAct (Reasoning and Acting) Loop</p>
         </header>
 
         <main>
@@ -828,7 +828,7 @@
         </main>
 
         <footer class="footer">
-            <p>Finance Agent &copy; 2026 | Powered by Google Gemini AI</p>
+            <p>Finance Agent &copy; 2026 | Powered by Groq AI</p>
             <div class="disclaimer">
                 <strong>Disclaimer:</strong> This tool is for educational and research purposes only. Stock data is fetched in real-time via Yahoo Finance. News is sourced from GNews and Marketaux APIs. This is not financial advice. Always consult a qualified financial advisor before making investment decisions.
             </div>
@@ -924,7 +924,7 @@
                             <h3> Error</h3>
                             <p>${err.message}</p>
                             <p style="margin-top:8px;font-size:0.9rem;opacity:0.8;">
-                                Make sure the Flask server (app.py) is running and your GEMINI_API_KEY is set in .env
+                                Make sure the Flask server (app.py) is running and your GROQ_API_KEY is set in .env
                             </p>
                         </div>`;
                     resultsDiv.style.display = 'block';
@@ -938,10 +938,19 @@
                 // Configure marked.js for clean rendering
                 marked.setOptions({
                     breaks: true,       // \n → <br>
-                    gfm: true,          // GitHub-Flavoured Markdown (tables, strikethrough, etc.)
+                    gfm: true,          // GitHub-Flavoured Markdown (tables, etc.)
                 });
 
-                const renderedHtml = marked.parse(answer);
+                // Custom renderer to disable strikethrough (~~text~~ → plain text)
+                const renderer = new marked.Renderer();
+                renderer.del = function(token) {
+                    // Render strikethrough as plain text instead
+                    return token.text || '';
+                };
+
+                const renderedHtml = marked.parse(answer, { renderer });
+                // Extra safety: strip any remaining <del> tags
+                const cleanHtml = renderedHtml.replace(/<del>([\s\S]*?)<\/del>/gi, '$1');
                 const timestamp = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
                 const html = `
@@ -951,7 +960,7 @@
                             <button class="copy-btn" id="copy-btn">&#128203; Copy</button>
                         </div>
                         <div class="agent-answer-body" id="answer-body">
-                            ${renderedHtml}
+                            ${cleanHtml}
                         </div>
                     </div>
                     <div class="sources">

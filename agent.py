@@ -44,7 +44,13 @@ Available tools:
 - get_news: Get recent financial news
 - query_filings_rag: Search regulatory documents and filings
 
-Think step by step and use tools as needed to answer the user's question comprehensively."""
+Think step by step and use tools as needed to answer the user's question comprehensively.
+
+IMPORTANT DATA FORMATTING RULES:
+- The `dividend_yield` field from get_stock_overview is ALREADY in percentage (e.g., 0.46 means 0.46%, NOT 46%). Do NOT multiply it by 100 again.
+- Always display dividend yield with the % symbol (e.g., "0.46%"), never as a raw decimal or multiplied again.
+- Market cap is in raw numbers (e.g., 17520000000000 = ₹17.52 Lakh Crore). Format for readability.
+- Do not use ~~strikethrough~~ formatting in your responses."""
 
 # Tool definitions in OpenAI/Groq format
 TOOLS = [
