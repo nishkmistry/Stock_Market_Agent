@@ -297,11 +297,30 @@ def query_filings_rag(query: str, ticker: str = None) -> Dict[str, Any]:
         }
     """
     try:
-        from rag.retriever import ensure_data, search
+        from rag.retriever import is_data_fresh, search
+        from rag.fetcher import fetch_all_filings
+        from rag.ingest import ingest_documents
 
-        # Auto-fetch + ingest if data is stale or missing
+        note_parts = []
+
+        # SYNCHRONOUS fetch+ingest when cache is stale or missing.
+        # Previously this used a background thread (ensure_data) and returned
+        # immediately, causing search() to always run on empty/stale data.
         if ticker:
-            ensure_data(ticker)
+            if not is_data_fresh(ticker):
+                print(f"[query_filings_rag] Cache miss for {ticker} — fetching synchronously...")
+                try:
+                    docs = fetch_all_filings(ticker)
+                    if docs:
+                        ingest_documents(docs)
+                        note_parts.append(f"Fetched {len(docs)} fresh filings for {ticker}.")
+                    else:
+                        note_parts.append(f"No filings found for {ticker} on BSE/RBI.")
+                except Exception as fetch_err:
+                    print(f"[query_filings_rag] Fetch failed for {ticker}: {fetch_err}")
+                    note_parts.append(f"Live fetch failed ({fetch_err}); searching cached data.")
+            else:
+                note_parts.append(f"Using cached filings for {ticker} (refreshed within 24h).")
 
         results = search(query, ticker=ticker)
 
@@ -317,15 +336,13 @@ def query_filings_rag(query: str, ticker: str = None) -> Dict[str, Any]:
                 ),
             }
 
+        note_parts.append("Results from BSE/NSE corporate filings and RBI documents. Data cached for 24h.")
         return {
             "query":         query,
             "ticker":        ticker,
             "results_count": len(results),
             "results":       results,
-            "note": (
-                f"Results from BSE/NSE corporate filings and RBI documents. "
-                f"Data is cached for 24 hours."
-            ),
+            "note":          " ".join(note_parts),
         }
 
     except Exception as e:

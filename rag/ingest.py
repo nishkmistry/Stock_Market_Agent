@@ -99,6 +99,10 @@ def _chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OV
         if chunk:
             chunks.append(chunk)
 
+        # If we've consumed all the text, stop — don't rewind by overlap
+        if end >= len(text):
+            break
+
         start = end - overlap
 
     return chunks
