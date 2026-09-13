@@ -167,20 +167,32 @@ def ingest_documents(docs: List[Dict[str, Any]]) -> int:
         all_texts, batch_size=BATCH_SIZE, show_progress_bar=False
     ).tolist()
 
+    # Deduplicate before upserting (ChromaDB 1.5.9 rejects dupes in a single batch)
+    unique_ids, unique_texts, unique_metas, unique_embeddings = [], [], [], []
+    seen_ids = set()
+
+    for idx, doc_id in enumerate(all_ids):
+        if doc_id not in seen_ids:
+            seen_ids.add(doc_id)
+            unique_ids.append(doc_id)
+            unique_texts.append(all_texts[idx])
+            unique_metas.append(all_metas[idx])
+            unique_embeddings.append(embeddings[idx])
+
     total = 0
-    for i in range(0, len(all_ids), UPSERT_BATCH):
+    for i in range(0, len(unique_ids), UPSERT_BATCH):
         s = i
-        e = min(i + UPSERT_BATCH, len(all_ids))
-        batch_ids = all_ids[s:e]
+        e = min(i + UPSERT_BATCH, len(unique_ids))
+        batch_ids = unique_ids[s:e]
         collection.upsert(
             ids=batch_ids,
-            documents=all_texts[s:e],
-            embeddings=embeddings[s:e],
-            metadatas=all_metas[s:e],
+            documents=unique_texts[s:e],
+            embeddings=unique_embeddings[s:e],
+            metadatas=unique_metas[s:e],
         )
         total += len(batch_ids)
 
-    print(f"[ingest] [OK] Upserted {total} chunks into ChromaDB.")
+    print(f"[ingest] [OK] Upserted {total} unique chunks into ChromaDB.")
     return total
 
 

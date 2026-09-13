@@ -11,6 +11,7 @@ Each fetcher returns a list of document dicts with keys:
 """
 
 import time
+import hashlib
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
@@ -103,6 +104,17 @@ _BSE_HEADERS = {
 def _normalize_ticker(ticker: str) -> str:
     """Strip exchange suffix to get clean NSE symbol (e.g. RELIANCE.NS -> RELIANCE)."""
     return ticker.replace(".NS", "").replace(".BO", "").upper()
+
+
+def _stable_id(prefix: str, *parts: str) -> str:
+    """
+    Build a stable, collision-resistant document ID from arbitrary string parts.
+    Uses MD5 (not Python's randomised hash()) so the same inputs always produce
+    the same ID across process restarts — required for ChromaDB upsert idempotency.
+    """
+    raw = "|".join(parts)
+    digest = hashlib.md5(raw.encode("utf-8", errors="replace")).hexdigest()[:12]
+    return f"{prefix}_{digest}"
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +217,7 @@ def fetch_bse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
             "date":   date_str,
             "ticker": symbol,
             "url":    f"https://www.bseindia.com/corporates/ann.html?scripcd={scrip_code}",
-            "doc_id": f"bse_{scrip_code}_{date_str}_{abs(hash(headline)) % 1_000_000}",
+            "doc_id": _stable_id("bse", scrip_code, date_str, headline),
         })
 
     print(f"[fetcher] BSE: {len(docs)} announcements for {ticker}")
@@ -298,7 +310,7 @@ def fetch_nse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
             "date":   dt_str,
             "ticker": symbol,
             "url":    f"https://www.nseindia.com/get-quotes/equity?symbol={symbol}",
-            "doc_id": f"nse_{symbol}_{dt_str}_{abs(hash(desc)) % 1_000_000}",
+            "doc_id": _stable_id("nse", symbol, dt_str, desc),
         })
 
     print(f"[fetcher] NSE: {len(docs)} announcements for {ticker}")
@@ -341,7 +353,7 @@ def _parse_rbi_table(soup: BeautifulSoup, label: str) -> List[Dict[str, Any]]:
             "date":   date_str,
             "ticker": "RBI",
             "url":    url,
-            "doc_id": f"rbi_{label.lower().replace(' ', '_')}_{abs(hash(title)) % 1_000_000}",
+            "doc_id": _stable_id("rbi", label, date_str, title),
         })
 
     return docs
