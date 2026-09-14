@@ -202,14 +202,16 @@ def fetch_bse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
         subcatname = (item.get("SUBCATNAME") or "").strip()
         newssub    = (item.get("NEWSSUB") or "").strip()
 
-        # Build a rich text blob
-        parts = [f"BSE Corporate Announcement — {headline}"]
+        # Build a rich text blob — lead with actual content (NEWSSUB) then classification
+        # Omit the raw attachment UUID filename — it is meaningless to the LLM
+        parts = [f"BSE Filing — {headline}"]
         if subcatname:
             parts.append(f"Category: {subcatname}")
-        if attachment:
-            parts.append(f"Document: {attachment}")
         if newssub:
-            parts.append(f"Details: {newssub[:500]}")
+            # NEWSSUB is the main description/body of the announcement
+            parts.append(f"Content: {newssub[:800]}")
+        parts.append(f"Date: {date_str}")
+        parts.append(f"Regulation: SEBI (LODR) Regulation 30")
 
         docs.append({
             "text":   "\n".join(parts),

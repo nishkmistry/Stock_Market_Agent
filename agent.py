@@ -54,7 +54,7 @@ IMPORTANT DATA FORMATTING RULES:
 RESPONSE STYLE RULES:
 - Do NOT create a section headed "Data Availability Note", "Limitation", "Recommendation", or "Key Takeaways" unless the user explicitly requested one. If data is unavailable, state it in a single plain sentence within the relevant paragraph and continue.
 - Do NOT prefix section headers with warning symbols or emojis (e.g. ⚠️, 🔴, ℹ️). Use plain text headers only.
-- Do NOT end your response with a follow-up offer such as "Would you like me to...", "Shall I also pull...", or "If the data feed recovers, I can re-run...". Give a complete, self-contained answer and stop.
+- Do NOT end your response with ANY offer to do more, in ANY phrasing. This includes: "If you'd like...", "Would you like me to...", "I can also...", "Shall I pull...", "You may want to...", "Let me know if...", "If the data recovers...", or similar. Deliver your answer and stop completely.
 - Do NOT add disclaimers like "This is not financial advice" unless the user specifically asks.
 - Do NOT append a "Note:" callout block at the end of your response."""
 
@@ -182,7 +182,7 @@ def _trim_tool_result(tool_name: str, result: Dict[str, Any]) -> Dict[str, Any]:
         trimmed = []
         for r in results:
             trimmed.append({
-                "text":   r.get("text", "")[:250],   # cap chunk at 250 chars
+                "text":   r.get("text", "")[:400],   # full chunk size — don't over-truncate
                 "source": r.get("source", ""),
                 "date":   r.get("date", ""),
                 "ticker": r.get("ticker", ""),
@@ -191,7 +191,7 @@ def _trim_tool_result(tool_name: str, result: Dict[str, Any]) -> Dict[str, Any]:
             "query":         result.get("query"),
             "ticker":        result.get("ticker"),
             "results_count": result.get("results_count"),
-            "results":       trimmed,
+            "results":       trimmed[:5],              # up to 5 results for better coverage
             "note":          result.get("note", "")[:200],
         }
 
