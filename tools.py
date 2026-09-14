@@ -64,50 +64,79 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
             ...
         }
     """
+    is_indian = ticker.endswith(".NS") or ticker.endswith(".BO")
+    base = ticker.replace(".NS", "").replace(".BO", "").upper()
+
+    # Build .NS candidate first, then the correct BSE ticker (scrip_code.BO, not symbol.BO)
+    # yfinance uses numeric BSE codes for .BO tickers (e.g. 540376.BO not DMART.BO)
     try:
-        # Create yfinance ticker object
-        stock = yf.Ticker(ticker)
+        from rag.fetcher import get_bse_scrip_code
+        bse_code = get_bse_scrip_code(base)
+        bse_ticker = f"{bse_code}.BO" if bse_code else f"{base}.BO"
+    except Exception:
+        bse_code = None
+        bse_ticker = f"{base}.BO"
 
-        # Get basic info
-        info = stock.info
+    if not is_indian:
+        candidates = [f"{base}.NS", bse_ticker, ticker]
+    elif ticker.endswith(".NS"):
+        candidates = [ticker, bse_ticker]
+    else:
+        candidates = [ticker, f"{base}.NS"]
 
-        # Get historical data for current price and volume
-        hist = stock.history(period="1d")
-        if hist.empty:
-            raise ValueError(f"No historical data found for ticker {ticker}")
+    last_error = None
+    for attempt_ticker in candidates:
+        try:
+            stock = yf.Ticker(attempt_ticker)
+            info  = stock.info
+            # Use 5d window so weekends/market-closed days don't cause false empty returns
+            hist  = stock.history(period="5d")
 
-        latest_data = hist.iloc[-1]
+            if hist.empty:
+                last_error = f"No historical data for {attempt_ticker}"
+                continue
 
-        # Extract key information
-        overview = {
-            "symbol": ticker.upper(),
-            "short_name": info.get("shortName", "N/A"),
-            "current_price": round(float(latest_data["Close"]), 2),
-            "market_cap": info.get("marketCap", 0),
-            "pe_ratio": info.get("trailingPE", None),
-            "dividend_yield": _format_dividend_yield(info.get("dividendYield")),
-            "52_week_high": info.get("fiftyTwoWeekHigh", None),
-            "52_week_low": info.get("fiftyTwoWeekLow", None),
-            "volume": int(latest_data["Volume"]),
-            "avg_volume": info.get("averageVolume", 0),
-            "currency": info.get("currency", "USD"),
-            "exchange": info.get("exchange", "N/A"),
-            "last_updated": datetime.now().isoformat()
-        }
+            # Sanity-check: reject if yfinance resolves to wrong currency region
+            # (e.g. bare "TCS" resolves to a US ticker in USD instead of INR)
+            currency = info.get("currency", "")
+            if not is_indian and currency == "INR":
+                pass  # Indian stock found via suffix fallback — good
+            if is_indian and currency not in ("INR", ""):
+                last_error = f"{attempt_ticker} resolved to non-INR currency ({currency})"
+                continue
 
-        # Handle None values for JSON serialization
-        for key, value in overview.items():
-            if value is None:
-                overview[key] = "N/A"
+            latest_data = hist.iloc[-1]
+            overview = {
+                "symbol":        attempt_ticker.upper(),
+                "short_name":    info.get("shortName", "N/A"),
+                "current_price": round(float(latest_data["Close"]), 2),
+                "market_cap":    info.get("marketCap", 0),
+                "pe_ratio":      info.get("trailingPE", None),
+                "dividend_yield": _format_dividend_yield(info.get("dividendYield")),
+                "52_week_high":  info.get("fiftyTwoWeekHigh", None),
+                "52_week_low":   info.get("fiftyTwoWeekLow", None),
+                "volume":        int(latest_data["Volume"]),
+                "avg_volume":    info.get("averageVolume", 0),
+                "currency":      currency,
+                "exchange":      info.get("exchange", "N/A"),
+                "last_updated":  datetime.now().isoformat()
+            }
 
-        return overview
+            for key, value in overview.items():
+                if value is None:
+                    overview[key] = "N/A"
 
-    except Exception as e:
-        return {
-            "error": f"Failed to retrieve stock data for {ticker}: {str(e)}",
-            "symbol": ticker.upper(),
-            "last_updated": datetime.now().isoformat()
-        }
+            return overview
+
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    return {
+        "error": f"Failed to retrieve stock data for {ticker}: {last_error}",
+        "symbol": ticker.upper(),
+        "last_updated": datetime.now().isoformat()
+    }
 
 def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
     """
@@ -121,33 +150,46 @@ def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
         Dict[str, Any]: News articles data from both sources combined
     """
     try:
-        # Extract clean ticker symbol (remove .NS/.BO suffix for API queries)
+        is_indian = ticker.endswith(".NS") or ticker.endswith(".BO")
         clean_ticker = ticker.replace('.NS', '').replace('.BO', '')
 
-        # Get company name from yfinance for better news search
-        try:
-            stock = yf.Ticker(ticker)
-            info = stock.info
-            company_name = info.get('shortName', clean_ticker)
-        except:
-            company_name = clean_ticker
+        # Resolve proper company name from yfinance, validating currency for Indian stocks
+        company_name = None
+        candidates = [ticker] if is_indian else [clean_ticker + ".NS", clean_ticker + ".BO", ticker]
+
+        for t in candidates:
+            try:
+                info = yf.Ticker(t).info
+                name = info.get("shortName") or info.get("longName")
+                currency = info.get("currency", "")
+                if name and (currency == "INR" or not is_indian):
+                    company_name = name
+                    break
+            except Exception:
+                continue
+
+        # Build GNews search query — always set, no fragile dir() check
+        if not company_name:
+            company_name = clean_ticker + (" India" if is_indian else "")
+            gnews_query = company_name
+        elif is_indian and "india" not in company_name.lower():
+            gnews_query = company_name + " India"
+        else:
+            gnews_query = company_name
 
         all_articles = []
 
-        # Fetch from GNews API
-        gnews_articles = _fetch_gnews(company_name, limit)
+        # GNews: use country filter based on market — avoids mismatch (e.g. TCS → Container Store)
+        gnews_articles = _fetch_gnews(gnews_query, limit, country="in" if is_indian else None)
         if gnews_articles:
             all_articles.extend(gnews_articles)
 
-        # Fetch from Marketaux API
+        # Marketaux: scoped to ticker symbol directly, no disambiguation needed
         marketaaux_articles = _fetch_marketaaux(clean_ticker, limit)
         if marketaaux_articles:
             all_articles.extend(marketaaux_articles)
 
-        # Remove duplicates based on title similarity
         unique_articles = _remove_duplicate_articles(all_articles)
-
-        # Sort by publication date (newest first) and limit results
         unique_articles.sort(key=lambda x: x.get('publishedAt', ''), reverse=True)
         final_articles = unique_articles[:limit]
 
@@ -168,7 +210,11 @@ def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
         }
 
 
-def _fetch_gnews(company_name: str, limit: int) -> List[Dict[str, Any]]:
+
+
+
+
+def _fetch_gnews(company_name: str, limit: int, country: str = None) -> List[Dict[str, Any]]:
     """Fetch news from GNews API."""
     try:
         api_key = os.getenv("GNEWS_API_KEY")
@@ -179,10 +225,11 @@ def _fetch_gnews(company_name: str, limit: int) -> List[Dict[str, Any]]:
         params = {
             "q": company_name,
             "lang": "en",
-            "country": "in",  # Focus on Indian news
-            "max": min(limit, 10),  # GNews max is 10 per request
+            "max": min(limit, 10),
             "apikey": api_key
         }
+        if country:
+            params["country"] = country  # e.g. "in" for Indian stocks only
 
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -191,14 +238,14 @@ def _fetch_gnews(company_name: str, limit: int) -> List[Dict[str, Any]]:
         articles = []
         for article in data.get("articles", []):
             articles.append({
-                "title": article.get("title", ""),
+                "title":       article.get("title", ""),
                 "description": article.get("description", ""),
-                "content": article.get("content", ""),
-                "url": article.get("url", ""),
-                "source": article.get("source", {}).get("name", "GNews"),
+                "content":     article.get("content", ""),
+                "url":         article.get("url", ""),
+                "source":      article.get("source", {}).get("name", "GNews"),
                 "publishedAt": article.get("publishedAt", ""),
-                "image": article.get("image", ""),
-                "source_api": "GNews"
+                "image":       article.get("image", ""),
+                "source_api":  "GNews"
             })
 
         return articles

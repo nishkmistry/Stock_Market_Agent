@@ -47,10 +47,16 @@ Available tools:
 Think step by step and use tools as needed to answer the user's question comprehensively.
 
 IMPORTANT DATA FORMATTING RULES:
-- The `dividend_yield` field from get_stock_overview is ALREADY in percentage (e.g., 0.46 means 0.46%, NOT 46%). Do NOT multiply it by 100 again.
-- Always display dividend yield with the % symbol (e.g., "0.46%"), never as a raw decimal or multiplied again.
+- The `dividend_yield` field from get_stock_overview is pre-formatted as a percentage string (e.g., "0.46%"). Use it exactly as returned — do NOT multiply or reformat it.
 - Market cap is in raw numbers (e.g., 17520000000000 = ₹17.52 Lakh Crore). Format for readability.
-- Do not use ~~strikethrough~~ formatting in your responses."""
+- Do not use ~~strikethrough~~ formatting in your responses.
+
+RESPONSE STYLE RULES:
+- Do NOT create a section headed "Data Availability Note", "Limitation", "Recommendation", or "Key Takeaways" unless the user explicitly requested one. If data is unavailable, state it in a single plain sentence within the relevant paragraph and continue.
+- Do NOT prefix section headers with warning symbols or emojis (e.g. ⚠️, 🔴, ℹ️). Use plain text headers only.
+- Do NOT end your response with a follow-up offer such as "Would you like me to...", "Shall I also pull...", or "If the data feed recovers, I can re-run...". Give a complete, self-contained answer and stop.
+- Do NOT add disclaimers like "This is not financial advice" unless the user specifically asks.
+- Do NOT append a "Note:" callout block at the end of your response."""
 
 # Tool definitions in OpenAI/Groq format
 TOOLS = [
@@ -148,6 +154,50 @@ def _is_model_unavailable(error: Exception) -> bool:
     return "not found" in err or "model_not_found" in err or "404" in str(error)
 
 
+def _trim_tool_result(tool_name: str, result: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Strip heavy / redundant fields from tool results before sending to the LLM.
+    Keeps the information the LLM needs while minimising input tokens.
+    """
+    if tool_name == "get_news":
+        articles = result.get("articles", [])
+        trimmed = []
+        for a in articles[:6]:   # cap at 6 articles
+            trimmed.append({
+                "title":       a.get("title", ""),
+                "description": a.get("description", "")[:150],  # keep summary for synthesis
+                "source":      a.get("source", ""),
+                "publishedAt": a.get("publishedAt", ""),
+                "url":         a.get("url", ""),
+            })
+        return {
+            "ticker":         result.get("ticker"),
+            "company_name":   result.get("company_name"),
+            "articles_found": result.get("articles_found"),
+            "articles":       trimmed,
+        }
+
+    if tool_name == "query_filings_rag":
+        results = result.get("results", [])
+        trimmed = []
+        for r in results:
+            trimmed.append({
+                "text":   r.get("text", "")[:250],   # cap chunk at 250 chars
+                "source": r.get("source", ""),
+                "date":   r.get("date", ""),
+                "ticker": r.get("ticker", ""),
+            })
+        return {
+            "query":         result.get("query"),
+            "ticker":        result.get("ticker"),
+            "results_count": result.get("results_count"),
+            "results":       trimmed,
+            "note":          result.get("note", "")[:200],
+        }
+
+    return result
+
+
 def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
     """Execute a tool function with the given input."""
     TOOL_FUNCTIONS = {
@@ -183,7 +233,7 @@ def _call_groq_with_retry(
                 messages=messages,
                 tools=TOOLS,
                 tool_choice="auto",
-                max_tokens=4096,
+                max_tokens=8192,
                 temperature=0.1,
             )
         except Exception as e:
@@ -299,6 +349,9 @@ def run_agent_loop(user_query: str, max_iterations: int = 10) -> str:
 
                 print(f"[agent] Calling tool: {tool_name} with input: {tool_input}")
                 result = execute_tool(tool_name, tool_input)
+
+                # Trim heavy fields before sending to the LLM to reduce input tokens
+                result = _trim_tool_result(tool_name, result)
 
                 # Send tool result back
                 messages.append({

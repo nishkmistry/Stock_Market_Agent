@@ -417,8 +417,8 @@ def fetch_all_filings(ticker: str) -> List[Dict[str, Any]]:
     # BSE: 30 days of corporate announcements
     all_docs.extend(fetch_bse_announcements(ticker, days=30))
 
-    # RBI: press releases only (fastest source, ~1s)
-    all_docs.extend(fetch_rbi_circulars(days=90, sources_limit=1))
+    # RBI: press releases, circulars, and notifications (all 3 sources)
+    all_docs.extend(fetch_rbi_circulars(days=90, sources_limit=3))
 
     print(f"[fetcher] --- Total fetched: {len(all_docs)} documents ---")
     return all_docs

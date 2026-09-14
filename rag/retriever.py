@@ -25,7 +25,7 @@ from rag.ingest import ingest_documents
 # Configuration
 # ---------------------------------------------------------------------------
 CACHE_TTL_HOURS = 24   # re-fetch after 24 h
-DEFAULT_TOP_K   = 5
+DEFAULT_TOP_K   = 3    # kept low to stay within Groq token-per-minute limits
 
 
 # ---------------------------------------------------------------------------
