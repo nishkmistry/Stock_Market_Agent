@@ -13,7 +13,7 @@ Design decisions
 
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import chromadb
 from sentence_transformers import SentenceTransformer
@@ -47,19 +47,20 @@ def _get_model() -> SentenceTransformer:
         print(f"[ingest] Loading embedding model '{EMBED_MODEL}'...")
         _model = SentenceTransformer(EMBED_MODEL)
         print("[ingest] Model loaded.")
-    return _model
+    return cast(SentenceTransformer, _model)#type:ignore
 
 
 def _get_collection() -> chromadb.Collection:
     global _client, _collection
     if _collection is None:
         os.makedirs(CHROMA_PATH, exist_ok=True)
-        _client : Any    = chromadb.PersistentClient(path=CHROMA_PATH)
-        _collection: Any = _client.get_or_create_collection(
+        client = chromadb.PersistentClient(path=CHROMA_PATH)
+        _client = client
+        _collection = client.get_or_create_collection(
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
         )
-    return _collection
+    return cast(chromadb.Collection, _collection)#type:ignore
 
 
 # ---------------------------------------------------------------------------

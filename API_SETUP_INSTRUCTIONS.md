@@ -16,6 +16,14 @@ To make the Finance Agent fully functional, you need to obtain and configure the
 - Get it from: https://groq.com/
 - Set as: `GROQ_API_KEY=your_actual_groq_api_key_here`
 
+### 4. PORT
+- Any port number you prefer
+- Set as: `PORT=port_number`
+
+### 5. HuggingFace API
+- Get it from: https://huggingface.co/
+- Set as: `HF_TOKEN=your_actual_HF_token_here`
+
 ## Setup Instructions
 
 1. Create a `.env` file in the project root directory (same level as this README)
@@ -25,6 +33,8 @@ To make the Finance Agent fully functional, you need to obtain and configure the
 GROQ_API_KEY=your_actual_groq_api_key_here
 GNEWS_API_KEY=your_actual_gnews_key_here
 MARKETAUX_API_KEY=your_actual_marketaux_key_here
+PORT=port_number
+HF_TOKEN=your_actual_HF_token_here
 ```
 
 3. Replace the placeholder values with your actual API keys obtained from the respective services
