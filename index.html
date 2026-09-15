@@ -739,6 +739,153 @@
             margin: 24px 0;
         }
 
+        /* ── Upload panel ── */
+        .upload-zone {
+            border: 2.5px dashed #aab8d4;
+            border-radius: 16px;
+            background: #f8faff;
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.25s, background 0.25s;
+            position: relative;
+        }
+
+        .upload-zone.drag-over {
+            border-color: #2a5298;
+            background: #eef3ff;
+        }
+
+        .upload-zone .upload-icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .upload-zone p {
+            color: #5a6a8a;
+            margin-bottom: 6px;
+            font-size: 0.97rem;
+        }
+
+        .upload-zone .upload-hint {
+            font-size: 0.82rem;
+            color: #9aa3b5;
+        }
+
+        .upload-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .upload-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .upload-controls input[type="text"] {
+            flex: 1;
+            min-width: 180px;
+            padding: 12px 16px;
+            border: 2px solid #dde3ef;
+            border-radius: 12px;
+            font-size: 0.97rem;
+            font-family: inherit;
+            background: #fafbff;
+            transition: border-color 0.25s;
+        }
+
+        .upload-controls input[type="text"]:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42,82,152,0.15);
+        }
+
+        .btn-upload {
+            background: linear-gradient(135deg, #27ae60, #1e8449);
+        }
+
+        .btn-upload:hover {
+            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.35);
+        }
+
+        .file-list {
+            margin-top: 14px;
+            text-align: left;
+        }
+
+        .file-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e8f0fe;
+            color: #1e3c72;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 0.85rem;
+            margin: 4px;
+        }
+
+        .file-chip .remove-file {
+            cursor: pointer;
+            font-weight: 700;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+
+        .upload-result {
+            margin-top: 16px;
+            border-radius: 12px;
+            padding: 16px 20px;
+            font-size: 0.93rem;
+            display: none;
+        }
+
+        .upload-result.success {
+            background: #f0faf4;
+            border: 1px solid #a7f3d0;
+            border-left: 4px solid #27ae60;
+            color: #1b5e20;
+        }
+
+        .upload-result.error {
+            background: #fff5f5;
+            border: 1px solid #fecaca;
+            border-left: 4px solid #ef4444;
+            color: #991b1b;
+        }
+
+        .upload-loading {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            color: #5a6a8a;
+            font-style: italic;
+            margin-top: 14px;
+            font-size: 0.93rem;
+        }
+
+        .kb-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            padding: 5px 14px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             main { padding: 24px; }
@@ -774,8 +921,46 @@
                 </ol>
             </section>
 
+            <section class="demo-section" id="upload-section">
+                <h2>
+                    &#128196; Upload NSE Filings
+                    <span class="kb-badge" id="kb-badge" title="Chunks in knowledge base">&#128218; <span id="kb-count">—</span> chunks</span>
+                </h2>
+                <p style="margin-bottom:16px;color:#5a6a8a;">
+                    Can't fetch from the NSE API? Upload filing documents directly — PDF, DOCX, TXT, XLSX, or CSV. The agent will search them instantly.
+                </p>
+
+                <!-- Drag-and-drop zone -->
+                <div class="upload-zone" id="upload-zone">
+                    <span class="upload-icon">&#128228;</span>
+                    <p><strong>Drag &amp; drop files here</strong> or click to browse</p>
+                    <p class="upload-hint">Supported: PDF &bull; DOCX &bull; TXT &bull; XLSX &bull; CSV &nbsp;|&nbsp; Multiple files allowed</p>
+                    <input type="file" id="filing-files" multiple accept=".pdf,.docx,.txt,.xlsx,.csv" />
+                </div>
+
+                <!-- Selected file chips -->
+                <div class="file-list" id="file-list"></div>
+
+                <!-- Ticker + Upload button -->
+                <div class="upload-controls">
+                    <input type="text" id="upload-ticker" placeholder="Ticker (optional, e.g. RELIANCE.NS)" autocomplete="off" />
+                    <button class="btn btn-upload" id="upload-btn" disabled>
+                        &#128229; Upload &amp; Ingest
+                    </button>
+                </div>
+
+                <!-- Loading indicator -->
+                <div class="upload-loading" id="upload-loading">
+                    <div class="spinner"></div>
+                    <span>Parsing &amp; ingesting into knowledge base…</span>
+                </div>
+
+                <!-- Result feedback -->
+                <div class="upload-result" id="upload-result"></div>
+            </section>
+
             <section class="demo-section">
-                <h2> Ask Your Investment Question</h2>
+                <h2>&#129302; Ask Your Investment Question</h2>
                 <div class="query-input">
                     <div class="input-group">
                         <input type="text" id="ticker-input" placeholder="Ticker (e.g., RELIANCE)" autocomplete="off" />
@@ -837,6 +1022,139 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // ══════════════════════════════════════════════════
+            // Upload panel logic
+            // ══════════════════════════════════════════════════
+            const uploadZone    = document.getElementById('upload-zone');
+            const fileInput     = document.getElementById('filing-files');
+            const fileListEl    = document.getElementById('file-list');
+            const uploadBtn     = document.getElementById('upload-btn');
+            const uploadLoading = document.getElementById('upload-loading');
+            const uploadResult  = document.getElementById('upload-result');
+            const uploadTicker  = document.getElementById('upload-ticker');
+            const kbCount       = document.getElementById('kb-count');
+
+            let selectedFiles = [];  // DataTransfer-style file array
+
+            // Fetch and display KB chunk count
+            async function refreshKbBadge() {
+                try {
+                    const res  = await fetch('/api/filings-status');
+                    const data = await res.json();
+                    kbCount.textContent = data.total_chunks ?? '—';
+                } catch (_) {
+                    kbCount.textContent = '—';
+                }
+            }
+            refreshKbBadge();
+
+            // Drag-and-drop visual feedback
+            uploadZone.addEventListener('dragover', e => {
+                e.preventDefault();
+                uploadZone.classList.add('drag-over');
+            });
+            uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+            uploadZone.addEventListener('drop', e => {
+                e.preventDefault();
+                uploadZone.classList.remove('drag-over');
+                addFiles(Array.from(e.dataTransfer.files));
+            });
+
+            // File input change
+            fileInput.addEventListener('change', () => {
+                addFiles(Array.from(fileInput.files));
+                fileInput.value = '';   // reset so same file can be re-selected
+            });
+
+            function addFiles(newFiles) {
+                const allowed = ['.pdf', '.docx', '.txt', '.xlsx', '.csv'];
+                newFiles.forEach(f => {
+                    const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase();
+                    if (!allowed.includes(ext)) {
+                        showUploadResult('error', `&#9888; "${f.name}" is not a supported file type (PDF, DOCX, TXT, XLSX, CSV).`);
+                        return;
+                    }
+                    if (!selectedFiles.find(x => x.name === f.name && x.size === f.size)) {
+                        selectedFiles.push(f);
+                    }
+                });
+                renderFileChips();
+            }
+
+            function renderFileChips() {
+                fileListEl.innerHTML = '';
+                selectedFiles.forEach((f, idx) => {
+                    const chip = document.createElement('span');
+                    chip.className = 'file-chip';
+                    chip.innerHTML = `&#128196; ${f.name} <span class="remove-file" data-idx="${idx}">&times;</span>`;
+                    fileListEl.appendChild(chip);
+                });
+                uploadBtn.disabled = selectedFiles.length === 0;
+                uploadResult.style.display = 'none';
+            }
+
+            // Remove individual file chip
+            fileListEl.addEventListener('click', e => {
+                if (e.target.classList.contains('remove-file')) {
+                    const idx = parseInt(e.target.dataset.idx, 10);
+                    selectedFiles.splice(idx, 1);
+                    renderFileChips();
+                }
+            });
+
+            // Upload & ingest
+            uploadBtn.addEventListener('click', async () => {
+                if (!selectedFiles.length) return;
+
+                const fd = new FormData();
+                selectedFiles.forEach(f => fd.append('files', f));
+                const ticker = uploadTicker.value.trim().toUpperCase();
+                if (ticker) fd.append('ticker', ticker);
+
+                uploadBtn.disabled   = true;
+                uploadLoading.style.display = 'flex';
+                uploadResult.style.display  = 'none';
+
+                try {
+                    const res  = await fetch('/api/upload-filings', { method: 'POST', body: fd });
+                    const data = await res.json();
+
+                    if (!res.ok || data.error) {
+                        showUploadResult('error', `&#10060; Upload failed: ${data.error || res.statusText}`);
+                        return;
+                    }
+
+                    let msg = `&#9989; <strong>${data.files_processed} file(s) ingested</strong> — ${data.chunks_ingested} chunks added to knowledge base.`;
+                    if (data.ingested_files && data.ingested_files.length) {
+                        msg += `<br><small style="opacity:0.8;">Files: ${data.ingested_files.join(', ')}</small>`;
+                    }
+                    if (data.skipped && data.skipped.length) {
+                        msg += `<br><small style="color:#b45309;">&#9888; Skipped: ${data.skipped.map(s => `${s.filename} — ${s.reason}`).join('; ')}</small>`;
+                    }
+                    showUploadResult('success', msg);
+
+                    // Clear the file list after successful upload
+                    selectedFiles = [];
+                    renderFileChips();
+                    await refreshKbBadge();
+
+                } catch (err) {
+                    showUploadResult('error', `&#10060; Network error: ${err.message}`);
+                } finally {
+                    uploadLoading.style.display = 'none';
+                    uploadBtn.disabled = selectedFiles.length === 0;
+                }
+            });
+
+            function showUploadResult(type, html) {
+                uploadResult.className = `upload-result ${type}`;
+                uploadResult.innerHTML = html;
+                uploadResult.style.display = 'block';
+            }
+
+            // ══════════════════════════════════════════════════
+            // Analyze panel logic (original)
+            // ══════════════════════════════════════════════════
             const tickerInput = document.getElementById('ticker-input');
             const exchangeSelect = document.getElementById('exchange-select');
             const analysisTypeSelect = document.getElementById('analysis-type');
