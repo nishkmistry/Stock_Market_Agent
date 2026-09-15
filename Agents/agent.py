@@ -12,7 +12,7 @@ import random
 from typing import Dict, Any, List, Optional
 from groq import Groq, RateLimitError, APIStatusError
 from dotenv import load_dotenv
-from tools import get_stock_overview, get_news, query_filings_rag
+from Agents.tools import get_stock_overview, get_news, query_filings_rag
 
 # Load environment variables
 load_dotenv()

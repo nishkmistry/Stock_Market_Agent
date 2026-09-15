@@ -18,8 +18,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 def _prewarm():
     """Load ChromaDB into memory at startup."""
     try:
-        from rag.ingest import collection_count
-        collection_count()
+        from rag.ingest import _get_collection #type: ignore
+        _get_collection()
         print("[startup] ChromaDB pre-warmed.")
     except Exception as e:
         print(f"[startup] Pre-warm failed (non-fatal): {e}")
