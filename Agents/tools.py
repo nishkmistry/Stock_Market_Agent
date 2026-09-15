@@ -7,14 +7,14 @@ import yfinance as yf
 import json
 import requests
 import os
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from datetime import datetime
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
 
 
 
-def _format_dividend_yield(raw_yield) -> str:
+def _format_dividend_yield(raw_yield: Any) -> str:
     """
     yfinance returns dividendYield inconsistently:
     - Some tickers: decimal fraction  (e.g. 0.0046  → 0.46%)
@@ -84,16 +84,16 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
     else:
         candidates = [ticker, f"{base}.NS"]
 
-    last_error = None
+    last_error: str = ''
     for attempt_ticker in candidates:
         try:
-            stock = yf.Ticker(attempt_ticker)
-            info  = stock.info
+            stock : Any = yf.Ticker(attempt_ticker)
+            info: dict[Any, Any]  = stock.info
             # Use 5d window so weekends/market-closed days don't cause false empty returns
             hist  = stock.history(period="5d")
 
             if hist.empty:
-                last_error = f"No historical data for {attempt_ticker}"
+                last_error: str = f"No historical data for {attempt_ticker}"
                 continue
 
             # Sanity-check: reject if yfinance resolves to wrong currency region
@@ -105,8 +105,8 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
                 last_error = f"{attempt_ticker} resolved to non-INR currency ({currency})"
                 continue
 
-            latest_data = hist.iloc[-1]
-            overview = {
+            latest_data: Any = hist.iloc[-1]
+            overview : dict[str, Any] = {
                 "symbol":        attempt_ticker.upper(),
                 "short_name":    info.get("shortName", "N/A"),
                 "current_price": round(float(latest_data["Close"]), 2),
@@ -129,7 +129,7 @@ def get_stock_overview(ticker: str) -> Dict[str, Any]:
             return overview
 
         except Exception as e:
-            last_error = str(e)
+            last_error:str = str(e)
             continue
 
     return {
@@ -150,16 +150,16 @@ def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
         Dict[str, Any]: News articles data from both sources combined
     """
     try:
-        is_indian = ticker.endswith(".NS") or ticker.endswith(".BO")
-        clean_ticker = ticker.replace('.NS', '').replace('.BO', '')
+        is_indian:bool = ticker.endswith(".NS") or ticker.endswith(".BO")
+        clean_ticker:str = ticker.replace('.NS', '').replace('.BO', '')
 
         # Resolve proper company name from yfinance, validating currency for Indian stocks
         company_name = None
-        candidates = [ticker] if is_indian else [clean_ticker + ".NS", clean_ticker + ".BO", ticker]
+        candidates : list[Any] = [ticker] if is_indian else [clean_ticker + ".NS", clean_ticker + ".BO", ticker]
 
         for t in candidates:
             try:
-                info = yf.Ticker(t).info
+                info : dict[Any, Any] = yf.Ticker(t).info # type: ignore
                 name = info.get("shortName") or info.get("longName")
                 currency = info.get("currency", "")
                 if name and (currency == "INR" or not is_indian):
@@ -177,10 +177,10 @@ def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
         else:
             gnews_query = company_name
 
-        all_articles = []
+        all_articles:list[Any] = []
 
         # GNews: use country filter based on market — avoids mismatch (e.g. TCS → Container Store)
-        gnews_articles = _fetch_gnews(gnews_query, limit, country="in" if is_indian else None)
+        gnews_articles = _fetch_gnews(gnews_query, limit, country="in" if is_indian else "")
         if gnews_articles:
             all_articles.extend(gnews_articles)
 
@@ -214,7 +214,7 @@ def get_news(ticker: str, limit: int = 10) -> Dict[str, Any]:
 
 
 
-def _fetch_gnews(company_name: str, limit: int, country: str = None) -> List[Dict[str, Any]]:
+def _fetch_gnews(company_name: str, limit: int, country: str = "") -> List[Dict[str, Any]]:
     """Fetch news from GNews API."""
     try:
         api_key = os.getenv("GNEWS_API_KEY")
@@ -222,7 +222,7 @@ def _fetch_gnews(company_name: str, limit: int, country: str = None) -> List[Dic
             return []
 
         url = "https://gnews.io/api/v4/search"
-        params = {
+        params:dict[str, Any] = {
             "q": company_name,
             "lang": "en",
             "max": min(limit, 10),
@@ -235,7 +235,7 @@ def _fetch_gnews(company_name: str, limit: int, country: str = None) -> List[Dic
         response.raise_for_status()
         data = response.json()
 
-        articles = []
+        articles:list[Any] = []
         for article in data.get("articles", []):
             articles.append({
                 "title":       article.get("title", ""),
@@ -263,7 +263,7 @@ def _fetch_marketaaux(ticker: str, limit: int) -> List[Dict[str, Any]]:
             return []
 
         url = "https://api.marketaux.com/v1/news/all"
-        params = {
+        params:dict[str, Any] = {
             "symbols": ticker,
             "filter_entities": "true",
             "limit": min(limit, 50),  # Marketaux allows up to 50
@@ -274,7 +274,7 @@ def _fetch_marketaaux(ticker: str, limit: int) -> List[Dict[str, Any]]:
         response.raise_for_status()
         data = response.json()
 
-        articles = []
+        articles:list[Any] = []
         for article in data.get("data", []):
             entities = article.get("entities", [])
             # Find the matching ticker entity
@@ -309,8 +309,8 @@ def _remove_duplicate_articles(articles: List[Dict[str, Any]]) -> List[Dict[str,
     if not articles:
         return []
 
-    unique_articles = []
-    seen_titles = set()
+    unique_articles:list[Any] = []
+    seen_titles:set[Any] = set()
 
     for article in articles:
         title = article.get("title", "").lower().strip()
@@ -322,7 +322,7 @@ def _remove_duplicate_articles(articles: List[Dict[str, Any]]) -> List[Dict[str,
     return unique_articles
 
 
-def query_filings_rag(query: str, ticker: str = None) -> Dict[str, Any]:
+def query_filings_rag(query: str, ticker: str = "") -> Dict[str, Any]:
     """
     Query the RAG pipeline for NSE/BSE/RBI regulatory filings and documents.
 
@@ -348,7 +348,7 @@ def query_filings_rag(query: str, ticker: str = None) -> Dict[str, Any]:
         from rag.fetcher import fetch_all_filings
         from rag.ingest import ingest_documents
 
-        note_parts = []
+        note_parts:list[Any] = []
 
         # SYNCHRONOUS fetch+ingest when cache is stale or missing.
         # Previously this used a background thread (ensure_data) and returned

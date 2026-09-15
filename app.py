@@ -1,11 +1,11 @@
 import os
 import uuid
-import json
 import threading
+from typing import Any
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
-from agent import run_agent_loop
+from Agents.agent import run_agent_loop
 
 load_dotenv()
 
@@ -16,12 +16,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def _prewarm():
-    """Load the embedding model and ChromaDB into memory at startup."""
+    """Load ChromaDB into memory at startup."""
     try:
-        from rag.ingest import _get_model, _get_collection
-        _get_collection()
-        _get_model()
-        print("[startup] Embedding model + ChromaDB pre-warmed.")
+        from rag.ingest import collection_count
+        collection_count()
+        print("[startup] ChromaDB pre-warmed.")
     except Exception as e:
         print(f"[startup] Pre-warm failed (non-fatal): {e}")
 
@@ -96,9 +95,9 @@ def upload_filings():
     ticker = (request.form.get("ticker") or "").strip().upper() or "UPLOADED"
     source_label = "NSE_UPLOAD"
 
-    ingested_files = []
-    skipped = []
-    docs = []
+    ingested_files: list[Any] = []
+    skipped : list[Any]= []
+    docs : list[Any] = []
 
     for f in files:
         original_name = f.filename or "unknown"

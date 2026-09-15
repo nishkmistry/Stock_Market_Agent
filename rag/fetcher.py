@@ -172,7 +172,7 @@ def fetch_bse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
     from_dt = to_dt - timedelta(days=days)
 
     url = "https://api.bseindia.com/BseIndiaAPI/api/AnnSubCategoryGetData/w"
-    params = {
+    params: dict[str, Any] = {
         "pageno":      1,
         "strCat":      "-1",
         "strPrevDate": from_dt.strftime("%Y%m%d"),
@@ -261,16 +261,16 @@ def fetch_nse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
              {"index": f"NIFTY%2050"}),          # generic fallback
         ]
 
-        items = []
+        items:list[Any] = []
         for url, params in nse_endpoints:
             try:
                 resp = session.get(url, params=params, timeout=15)
                 if resp.status_code == 200:
                     data = resp.json()
                     if isinstance(data, list):
-                        items = data
+                        items = data #type: ignore
                     elif isinstance(data, dict):
-                        items = data.get("data", data.get("announcements", []))
+                        items = data.get("data", data.get("announcements", [])) #type: ignore
                     if items:
                         break
             except Exception:
@@ -283,18 +283,18 @@ def fetch_nse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
     cutoff = datetime.now() - timedelta(days=days)
     docs: List[Dict[str, Any]] = []
 
-    for item in items:
-        desc    = (item.get("desc") or "").strip()
-        details = (item.get("an_dt") or "").strip()
-        dt_str  = (item.get("an_dt") or "").strip()
-        attchmnt = (item.get("attchmnt") or "").strip()
+    for item in items:  #type: ignore
+        desc    = (item.get("desc") or "").strip()  #type: ignore
+        details = (item.get("an_dt") or "").strip() #type: ignore
+        dt_str  = (item.get("an_dt") or "").strip() #type: ignore
+        attchmnt = (item.get("attchmnt") or "").strip() #type: ignore
 
         if not desc:
             continue
 
         # Date filter
         try:
-            item_dt = datetime.strptime(dt_str, "%d-%b-%Y")
+            item_dt = datetime.strptime(dt_str, "%d-%b-%Y")  #type: ignore
             if item_dt < cutoff:
                 continue
         except Exception:
@@ -310,7 +310,7 @@ def fetch_nse_announcements(ticker: str, days: int = 90) -> List[Dict[str, Any]]
             "date":   dt_str,
             "ticker": symbol,
             "url":    f"https://www.nseindia.com/get-quotes/equity?symbol={symbol}",
-            "doc_id": _stable_id("nse", symbol, dt_str, desc),
+            "doc_id": _stable_id("nse", symbol, dt_str, desc), #type: ignore
         })
 
     print(f"[fetcher] NSE: {len(docs)} announcements for {ticker}")
@@ -342,10 +342,10 @@ def _parse_rbi_table(soup: BeautifulSoup, label: str) -> List[Dict[str, Any]]:
             continue
 
         link_tag = title_cell.find("a")
-        url = ""
+        url : str = ""
         if link_tag and link_tag.get("href"):
-            href = link_tag["href"]
-            url = href if href.startswith("http") else "https://www.rbi.org.in" + href
+            href : Any= link_tag["href"]
+            url: str = href if href.startswith("http") else "https://www.rbi.org.in" + href
 
         docs.append({
             "text":   f"{label} — {title}",

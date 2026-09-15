@@ -4,17 +4,17 @@
 
 To make the Finance Agent fully functional, you need to obtain and configure the following API keys:
 
-### 1. Gemini API Key (for the LLM agent)
-- Get it from: https://ai.google.dev/
-- Set as: `GEMINI_API_KEY=your_actual_gemini_key_here`
-
-### 2. GNews API Key (for financial news)
+### 1. GNews API Key (for financial news)
 - Get it from: https://gnews.io/
 - Set as: `GNEWS_API_KEY=your_actual_gnews_key_here`
 
-### 3. Marketaux API Key (for financial news)
+### 2. Marketaux API Key (for financial news)
 - Get it from: https://marketaux.com/
 - Set as: `MARKETAUX_API_KEY=your_actual_marketaux_key_here`
+
+### 3. Groq API Key (for LLM agent)
+- Get it from: https://groq.com/
+- Set as: `GROQ_API_KEY=your_actual_groq_api_key_here`
 
 ## Setup Instructions
 
@@ -22,7 +22,7 @@ To make the Finance Agent fully functional, you need to obtain and configure the
 2. Add the following lines to the `.env` file:
 
 ```
-GEMINI_API_KEY=your_actual_gemini_key_here
+GROQ_API_KEY=your_actual_groq_api_key_here
 GNEWS_API_KEY=your_actual_gnews_key_here
 MARKETAUX_API_KEY=your_actual_marketaux_key_here
 ```
@@ -37,7 +37,7 @@ MARKETAUX_API_KEY=your_actual_marketaux_key_here
 - The `.gitignore` file is already configured to exclude `.env` files
 - If you accidentally commit your `.env` file, you'll need to rotate all your API keys immediately
 - Free tiers of these APIs may have rate limits - if you encounter quota errors, wait a few minutes before trying again
-- The Gemini API key is required for the agent to function - without it, the agent will not be able to reason and act
+- The Groq API key is required for the agent to function - without it, the agent will not be able to reason and act
 - The news API keys are optional for basic stock data functionality, but enhance the agent's capabilities
 
 ## Testing Your Setup

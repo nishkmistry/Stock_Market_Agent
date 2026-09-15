@@ -13,9 +13,9 @@ return an empty string so the caller can skip them gracefully.
 """
 
 import csv
-import io
-import os
-from typing import Optional
+#import io
+#import os
+from typing import Optional, Any
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ def _parse_pdf(path: str) -> str:
     """Extract text from a PDF using pdfplumber."""
     try:
         import pdfplumber  # lazy import so missing dep gives a clear error
-        parts = []
+        parts:list[Any] = []
         with pdfplumber.open(path) as pdf:
             for page in pdf.pages:
                 text = page.extract_text()
@@ -117,9 +117,9 @@ def _parse_xlsx(path: str) -> str:
     try:
         import openpyxl
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-        parts = []
+        parts:list[Any] = []
         for sheet in wb.worksheets:
-            sheet_rows = []
+            sheet_rows:list[Any] = []
             for row in sheet.iter_rows(values_only=True):
                 row_text = " | ".join(
                     str(cell) for cell in row if cell is not None and str(cell).strip()

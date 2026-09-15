@@ -12,12 +12,12 @@ Flow
 
 from __future__ import annotations
 
-import os
+#import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 # Shared singletons from ingest (avoids loading the model twice)
-from rag.ingest import _get_collection, _get_model, collection_count
+from rag.ingest import _get_collection, _get_model, collection_count #type: ignore
 from rag.fetcher import fetch_all_filings
 from rag.ingest import ingest_documents
 
@@ -52,11 +52,11 @@ def is_data_fresh(ticker: str, ttl_hours: int = CACHE_TTL_HOURS) -> bool:
             limit=1,
             include=["metadatas"],
         )
-        metas = results.get("metadatas") or []
+        metas:list[Any] = results.get("metadatas") or []
         if not metas:
             return False
 
-        ingested_at_str = metas[0].get("ingested_at", "")
+        ingested_at_str : str= metas[0].get("ingested_at", "")
         if not ingested_at_str:
             return False
 
@@ -75,7 +75,7 @@ def is_data_fresh(ticker: str, ttl_hours: int = CACHE_TTL_HOURS) -> bool:
 import threading
 
 _fetch_lock = threading.Lock()
-_fetching: set = set()   # tickers currently being fetched in background
+_fetching: set[Any] = set()   # tickers currently being fetched in background
 
 
 def _fetch_and_ingest(ticker: str) -> None:
@@ -142,11 +142,11 @@ def search(
     if total == 0:
         return []
 
-    model           = _get_model()
+    model:Any           = _get_model()
     query_embedding = model.encode([query]).tolist()[0]
 
     # Build where clause: ticker-specific docs + RBI macro docs
-    where: Optional[Dict] = None
+    where: Optional[Dict[Any, Any]] = None
     if ticker:
         clean = _normalize(ticker)
         where = {"ticker": {"$in": [clean, "RBI"]}}
@@ -154,7 +154,7 @@ def search(
     n = min(top_k, total)
 
     try:
-        results = collection.query(
+        results : Any = collection.query(
             query_embeddings=[query_embedding],
             n_results=n,
             where=where,
@@ -175,11 +175,11 @@ def search(
 
     formatted: List[Dict[str, Any]] = []
     docs      = results.get("documents", [[]])[0]
-    metas     = results.get("metadatas",  [[]])[0]
+    metas : list[Any]    = results.get("metadatas",  [[]])[0]
     distances = results.get("distances",  [[]])[0]
 
     for i, doc_text in enumerate(docs):
-        meta  = metas[i]     if i < len(metas)     else {}
+        meta:Any  = metas[i]     if i < len(metas)     else {}
         dist  = distances[i] if i < len(distances)  else 1.0
         score = round(max(0.0, 1.0 - dist), 4)    # cosine dist -> similarity
 

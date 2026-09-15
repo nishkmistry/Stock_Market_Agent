@@ -75,9 +75,33 @@ The Flask backend exposes 2 primary endpoints:
 ## 5. Project Structure
 
 1. `app.py`: Flask web server and API routing.
-2. `agent.py`: Groq LLM integration and ReAct tool-calling loop.
-3. `tools.py`: Tool definitions (stock overview, news, and RAG query wrappers).
+2. `Agents/agent.py`: Groq LLM integration and ReAct tool-calling loop.
+3. `Agents/tools.py`: Tool definitions (stock overview, news, and RAG query wrappers).
 4. `rag/fetcher.py`: Web scrapers for BSE and RBI with MD5-based stable ID generation.
 5. `rag/ingest.py`: Text chunking, embedding generation, and ChromaDB upsert logic (includes batch deduplication).
 6. `rag/retriever.py`: Semantic search and 24-hour cache validation logic.
 7. `index.html`: Web interface for user interaction.
+8. `conftest.py`: Shared fixtures and configurations.
+9. `test_indicators.py`: Unit tests for math/technical indicators.
+10. `test_data_feed.py`: Tests for data ingestion (with mocking)
+11. `test_agent.py`: Integration/unit tests for agent decision-making
+
+## 6. File Structure
+```bash
+Stock_Market_Agent/
+├── Agents/
+│   ├── agent.py
+│   ├── tools.py
+├── rag/
+│   ├── fetcher.py
+│   ├── ingest.py
+│   ├── retriever.py
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py       # Shared fixtures and configurations
+│   ├── test_indicators.py # Unit tests for math/technical indicators
+│   ├── test_data_feed.py # Tests for data ingestion (with mocking)
+│   └── test_agent.py     # Integration/unit tests for agent decision-making
+├── requirements.txt
+└── README.md
+```

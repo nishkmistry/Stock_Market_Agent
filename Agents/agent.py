@@ -10,7 +10,7 @@ import sys
 import time
 import random
 from typing import Dict, Any, List, Optional
-from groq import Groq, RateLimitError, APIStatusError, APIConnectionError
+from groq import Groq, RateLimitError, APIStatusError
 from dotenv import load_dotenv
 from tools import get_stock_overview, get_news, query_filings_rag
 
@@ -59,7 +59,7 @@ RESPONSE STYLE RULES:
 - Do NOT append a "Note:" callout block at the end of your response."""
 
 # Tool definitions in OpenAI/Groq format
-TOOLS = [
+TOOLS : List[Any] = [
     {
         "type": "function",
         "function": {
@@ -161,7 +161,7 @@ def _trim_tool_result(tool_name: str, result: Dict[str, Any]) -> Dict[str, Any]:
     """
     if tool_name == "get_news":
         articles = result.get("articles", [])
-        trimmed = []
+        trimmed:List[Any] = []
         for a in articles[:6]:   # cap at 6 articles
             trimmed.append({
                 "title":       a.get("title", ""),
@@ -200,7 +200,7 @@ def _trim_tool_result(tool_name: str, result: Dict[str, Any]) -> Dict[str, Any]:
 
 def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
     """Execute a tool function with the given input."""
-    TOOL_FUNCTIONS = {
+    TOOL_FUNCTIONS: dict[str, Any] = {
         "get_stock_overview": get_stock_overview,
         "get_news": get_news,
         "query_filings_rag": query_filings_rag,
@@ -217,7 +217,7 @@ def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
 
 def _call_groq_with_retry(
     model: str,
-    messages: List[Dict],
+    messages: List[Any],
     label: str = "API call"
 ) -> Any:
     """
@@ -297,7 +297,7 @@ def run_agent_loop(user_query: str, max_iterations: int = 10) -> str:
         )
 
     # Build conversation messages
-    messages: List[Dict] = [
+    messages: List[Any] = [
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_query},
     ]
@@ -319,7 +319,8 @@ def run_agent_loop(user_query: str, max_iterations: int = 10) -> str:
             return f"Error calling Groq: {str(e)}"
 
         choice = response.choices[0]
-        message = choice.message
+        message : Any = choice.message
+        tool_calls: List[Any] = message.tool_calls or []
 
         # Add assistant message to history
         messages.append({
@@ -334,21 +335,21 @@ def run_agent_loop(user_query: str, max_iterations: int = 10) -> str:
                         "arguments": tc.function.arguments,
                     }
                 }
-                for tc in (message.tool_calls or [])
+                for tc in tool_calls
             ] or None
         })
 
         # If the model wants to call tools
-        if choice.finish_reason == "tool_calls" and message.tool_calls:
-            for tool_call in message.tool_calls:
+        if choice.finish_reason == "tool_calls" and tool_calls:
+            for tool_call in tool_calls:
                 tool_name = tool_call.function.name
                 try:
-                    tool_input = json.loads(tool_call.function.arguments)
+                    tool_input : dict[Any, Any]= json.loads(tool_call.function.arguments)
                 except json.JSONDecodeError:
-                    tool_input = {}
+                    tool_input : dict[Any, Any] = {}
 
                 print(f"[agent] Calling tool: {tool_name} with input: {tool_input}")
-                result = execute_tool(tool_name, tool_input)
+                result : Dict[Any, Any] = execute_tool(tool_name, tool_input)
 
                 # Trim heavy fields before sending to the LLM to reduce input tokens
                 result = _trim_tool_result(tool_name, result)
