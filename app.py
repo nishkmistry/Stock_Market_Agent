@@ -1,5 +1,6 @@
 import os
 import uuid
+# import json
 import threading
 from typing import Any
 from flask import Flask, request, jsonify, send_from_directory
@@ -16,11 +17,12 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
 def _prewarm():
-    """Load ChromaDB into memory at startup."""
+    """Load the embedding model and ChromaDB into memory at startup."""
     try:
-        from rag.ingest import _get_collection #type: ignore
+        from rag.ingest import _get_model, _get_collection  #type:ignore
         _get_collection()
-        print("[startup] ChromaDB pre-warmed.")
+        _get_model()
+        print("[startup] Embedding model + ChromaDB pre-warmed.")
     except Exception as e:
         print(f"[startup] Pre-warm failed (non-fatal): {e}")
 
@@ -95,12 +97,12 @@ def upload_filings():
     ticker = (request.form.get("ticker") or "").strip().upper() or "UPLOADED"
     source_label = "NSE_UPLOAD"
 
-    ingested_files: list[Any] = []
-    skipped : list[Any]= []
-    docs : list[Any] = []
+    ingested_files:list[Any] = []
+    skipped:list[Any] = []
+    docs :list[Any] = []
 
     for f in files:
-        original_name = f.filename or "unknown"
+        original_name : str = f.filename or "unknown"
         ext = os.path.splitext(original_name)[1].lower()
 
         if ext not in ALLOWED_EXTENSIONS:

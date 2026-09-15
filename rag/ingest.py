@@ -33,7 +33,7 @@ UPSERT_BATCH  = 500   # ChromaDB upsert batch size
 
 # Module-level singletons (lazy-loaded)
 _model:      Optional[SentenceTransformer] = None
-_client:     Optional[chromadb.PersistentClient] = None  #type: ignore
+_client:     Optional[chromadb.PersistentClient] = None #type: ignore
 _collection: Optional[chromadb.Collection] = None #type: ignore
 
 
@@ -55,7 +55,7 @@ def _get_collection() -> chromadb.Collection:
     if _collection is None:
         os.makedirs(CHROMA_PATH, exist_ok=True)
         _client : Any    = chromadb.PersistentClient(path=CHROMA_PATH)
-        _collection : Any = _client.get_or_create_collection(
+        _collection: Any = _client.get_or_create_collection(
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
         )
@@ -131,7 +131,7 @@ def ingest_documents(docs: List[Dict[str, Any]]) -> int:
         return 0
 
     collection = _get_collection()
-    model: Any      = _get_model()
+    model : Any     = _get_model()
 
     all_ids:   List[str]            = []
     all_texts: List[str]            = []
@@ -168,10 +168,10 @@ def ingest_documents(docs: List[Dict[str, Any]]) -> int:
     ).tolist()
 
     # Deduplicate before upserting (ChromaDB 1.5.9 rejects dupes in a single batch)
-    unique_ids:list[Any] = []
-    unique_texts:list[Any] = []
-    unique_metas:list[Any] = []
-    unique_embeddings:list[Any] = []
+    unique_ids : list[Any]= []
+    unique_texts : list[Any]= []
+    unique_metas : list[Any]= []
+    unique_embeddings : list[Any]= []
     seen_ids:set[Any] = set()
 
     for idx, doc_id in enumerate(all_ids):
